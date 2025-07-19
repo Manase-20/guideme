@@ -46,7 +46,7 @@ Instalasi & Setup
 
 1. Clone repository
    bash
-   git clone https://github.com/Manase-20/guideme.githttps://github.com/Manase-20/guideme.git
+   git clone https://github.com/Manase-20/guideme.git
    cd guide-me
    
 2.Install dependencies
