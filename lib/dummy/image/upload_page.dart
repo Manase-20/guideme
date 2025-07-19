@@ -48,7 +48,7 @@ class _UploadPageState extends State<UploadPage> {
     final path = 'uploads/$fileName';
 
     // Mengunggah gambar ke Supabase
-    final response = await Supabase.instance.client.storage.from('images').upload(path, _imageFile!);
+    // final response = await Supabase.instance.client.storage.from('images').upload(path, _imageFile!);
 
     // Mendapatkan URL gambar yang diunggah
     final imageUrlResponse = await Supabase.instance.client.storage.from('images').getPublicUrl(path);

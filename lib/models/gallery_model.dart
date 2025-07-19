@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GalleryModel {
   String galleryId;
+  String? recommendationId;
   String name;
   String category;
   String subcategory;
@@ -10,20 +11,23 @@ class GalleryModel {
   Timestamp createdAt;
   bool? mainImage;
 
-  GalleryModel(
-      {required this.galleryId,
-      required this.name,
-      required this.category,
-      required this.subcategory,
-      this.description,
-      required this.imageUrl,
-      required this.createdAt,
-      this.mainImage});
+  GalleryModel({
+    required this.galleryId,
+    this.recommendationId,
+    required this.name,
+    required this.category,
+    required this.subcategory,
+    this.description,
+    required this.imageUrl,
+    required this.createdAt,
+    this.mainImage,
+  });
 
   // Fungsi untuk mengonversi Map menjadi objek GalleryModel
   factory GalleryModel.fromMap(Map<String, dynamic> map, String id) {
     return GalleryModel(
       galleryId: id,
+      recommendationId: map['recommendationId'],
       name: map['name'],
       category: map['category'],
       subcategory: map['subcategory'],
@@ -37,6 +41,7 @@ class GalleryModel {
   // Fungsi untuk mengonversi objek GalleryModel menjadi Map
   Map<String, dynamic> toMap() {
     return {
+      'recommendationId': recommendationId,
       'name': name,
       'category': category,
       'subcategory': subcategory,
@@ -48,6 +53,7 @@ class GalleryModel {
   } // Fungsi copyWith untuk membuat salinan objek dengan perubahan tertentu
 
   GalleryModel copyWith({
+    String? recommendationId,
     String? name,
     String? category,
     String? subcategory,
@@ -57,6 +63,7 @@ class GalleryModel {
   }) {
     return GalleryModel(
       galleryId: this.galleryId, // Tidak diubah karena tetap sama
+      recommendationId: this.recommendationId, // Tidak diubah karena tetap sama
       name: name ?? this.name,
       category: category ?? this.category,
       subcategory: subcategory ?? this.subcategory,

@@ -21,7 +21,7 @@ class EventModel {
   Timestamp? updatedAt;
 
   EventModel({
-    required this.eventId,    
+    required this.eventId,
     required this.name,
     required this.location,
     required this.latitude,
@@ -63,6 +63,10 @@ class EventModel {
       createdAt: map['createdAt'],
       updatedAt: map['updatedAt'],
     );
+  }
+  // Fungsi tambahan untuk mengambil EventModel dari DocumentSnapshot
+  static EventModel fromFirestore(DocumentSnapshot snapshot) {
+    return EventModel.fromMap(snapshot.data() as Map<String, dynamic>, snapshot.id);
   }
 
   // Mengonversi instance Event ke Map untuk disimpan di Firestore

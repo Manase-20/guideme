@@ -4,14 +4,14 @@ import 'package:guideme/controllers/user_controller.dart';
 import 'package:guideme/models/user_model.dart';
 import 'package:guideme/widgets/custom_navbar.dart'; // Import widget navbar
 
-class UserScreen extends StatefulWidget {
-  const UserScreen({super.key});
+class UserManagementScreen extends StatefulWidget {
+  const UserManagementScreen({super.key});
 
   @override
   _UserScreenState createState() => _UserScreenState();
 }
 
-class _UserScreenState extends State<UserScreen> {
+class _UserScreenState extends State<UserManagementScreen> {
   final UserController _userController = UserController();
 
   @override
@@ -26,7 +26,7 @@ class _UserScreenState extends State<UserScreen> {
   }
 }
 
-// Widget terpisah untuk konten UserScreen
+// Widget terpisah untuk konten UserManagementScreen
 class UserScreenContent extends StatelessWidget {
   final UserController _userController = UserController();
 
@@ -35,7 +35,7 @@ class UserScreenContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('user').snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (!snapshot.hasData) {
           return Center(child: CircularProgressIndicator());

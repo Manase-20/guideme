@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:guideme/controllers/category_controller.dart';
 import 'package:guideme/controllers/destination_controller.dart';
 import 'package:guideme/models/destination_model.dart';
+import 'package:guideme/widgets/custom_card.dart';
 import 'package:guideme/widgets/custom_form.dart';
 import 'package:guideme/widgets/widgets.dart';
 import 'package:image_picker/image_picker.dart';
@@ -191,7 +192,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
               children: [
                 CustomFormTitle(firstText: 'Create Destination', secondText: 'Design your data exactly you want it.'),
                 // Nama Destination
-                CustomTextField(
+                TextForm(
                   controller: _nameController,
                   label: 'Destination Name',
                   validator: (value) => value == null || value.isEmpty ? 'Name is required' : null,
@@ -205,7 +206,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                 SizedBox(height: 16),
 
                 // lokasi Destination
-                CustomTextField(
+                TextForm(
                   controller: _locationController,
                   label: 'Destination Location',
                   validator: (value) => value == null || value.isEmpty ? 'Location is required' : null,
@@ -219,68 +220,70 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                 SizedBox(height: 16),
 
                 // map
-                Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isMapExpanded = !_isMapExpanded;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: Duration(milliseconds: 300),
-                        height: _isMapExpanded ? MediaQuery.of(context).size.height : MediaQuery.of(context).size.height / 4,
-                        width: double.infinity,
-                        child: FlutterMap(
-                          mapController: _mapController,
-                          options: MapOptions(
-                            initialCenter: LatLng(1.1024563877808338, 104.03884839012828),
-                            onTap: (_, point) {
-                              setState(() {
-                                _selectedLocation = point;
-                              });
-                            },
-                          ),
-                          children: [
-                            TileLayer(
-                              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // Updated URL without subdomains
-                            ),
-                            if (_selectedLocation != null)
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: _selectedLocation!,
-                                    width: 40,
-                                    height: 40,
-                                    child: Icon(Icons.location_pin, color: Colors.red),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: IconButton(
-                        icon: Icon(
-                          _isMapExpanded ? Icons.fullscreen_exit : Icons.fullscreen,
-                          color: Colors.black,
-                        ),
-                        onPressed: () {
+                MainCard(
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
                           setState(() {
                             _isMapExpanded = !_isMapExpanded;
                           });
                         },
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          height: _isMapExpanded ? MediaQuery.of(context).size.height : MediaQuery.of(context).size.height / 4,
+                          width: double.infinity,
+                          child: FlutterMap(
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: LatLng(1.1024563877808338, 104.03884839012828),
+                              onTap: (_, point) {
+                                setState(() {
+                                  _selectedLocation = point;
+                                });
+                              },
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // Updated URL without subdomains
+                              ),
+                              if (_selectedLocation != null)
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      point: _selectedLocation!,
+                                      width: 40,
+                                      height: 40,
+                                      child: Icon(Icons.location_pin, color: Colors.red),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: IconButton(
+                          icon: Icon(
+                            _isMapExpanded ? Icons.fullscreen_exit : Icons.fullscreen,
+                            color: Colors.black,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isMapExpanded = !_isMapExpanded;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 16),
 
                 // organizer Destination
-                CustomTextField(
+                TextForm(
                   label: 'Destination Organizer',
                   controller: _organizerController,
                   validator: (value) {
@@ -305,7 +308,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                     if (!snapshot.hasData) {
                       return CircularProgressIndicator();
                     }
-                    // return CustomDropdown(
+                    // return TextDropdown(
                     //   label: 'Category',
                     //   items: snapshot.data!, // Menggunakan data kategori yang diterima
                     //   onChanged: (value) {
@@ -321,7 +324,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                     //     return null;
                     //   },
                     // );
-                    return CustomDropdown(
+                    return TextDropdown(
                       label: 'Category',
                       items: ['destination'], // Hanya memiliki satu item tetap
                       value: _selectedCategory, // Menampilkan nilai _selectedCategory
@@ -350,7 +353,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                       if (!snapshot.hasData) {
                         return CircularProgressIndicator();
                       }
-                      return CustomDropdown(
+                      return TextDropdown(
                         label: 'Subcategory',
                         items: snapshot.data!, // Menggunakan subcategories yang diterima
                         onChanged: (value) {
@@ -369,26 +372,29 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                   ),
                 SizedBox(height: _selectedCategory != null ? 16 : 0),
 
-                // deskripsi Destination
-                CustomTextField(
+                // deskripsi Ticket
+                TextArea(
                   controller: _descriptionController,
                   label: 'Destination Description',
+                  hintText: 'Enter destination description here..',
                   validator: (value) => value == null || value.isEmpty ? 'Description is required' : null,
                 ),
                 SizedBox(height: 16),
 
                 // informasi Destination
-                CustomTextField(
+                TextArea(
                   controller: _informationController,
                   label: 'Destination Information',
+                  hintText: 'Enter destination information here..',
                   validator: (value) => value == null || value.isEmpty ? 'Information is required' : null,
                 ),
                 SizedBox(height: 16),
 
                 // price Destination
-                CustomTextField(
+                TextForm(
                   controller: _priceController,
                   label: 'Destination Price',
+                  hintText: 'Enter destination price here..',
                   keyboardType: TextInputType.number, // Hanya angka yang dapat dimasukkan
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly, // Membatasi input hanya angka
@@ -397,7 +403,7 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                 ),
                 SizedBox(height: 16),
 
-                CustomDropdown(
+                TextDropdown(
                   label: 'Status',
                   items: ['open', 'close'],
                   onChanged: (value) {
@@ -421,95 +427,87 @@ class _createDestinationScreenState extends State<CreateDestinationScreen> {
                 ),
 
                 // Waktu Buka
-                ListTile(
-                  title: Text('Opening Time'),
-                  subtitle: Text(_openingTime != null ? _openingTime!.toDate().toString() : 'Select opening time'),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          _openingTime = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Opening Date Time',
+                  subtitle: _openingTime != null ? _openingTime!.toDate().toString() : 'Select opening time',
+                  selectedTime: _openingTime, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      _openingTime = selectedTime; // Mengupdate openingTimeNotifier
+                    });
                   },
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 20),
 
                 // Waktu Tutup
-                ListTile(
-                  title: Text('Closing Time'),
-                  subtitle: Text(_closingTime != null ? _closingTime!.toDate().toString() : 'Select closing time'),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          _closingTime = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Closing Date Time',
+                  subtitle: _closingTime != null ? _closingTime!.toDate().toString() : 'Select closing time',
+                  selectedTime: _closingTime, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      _closingTime = selectedTime; // Mengupdate closingTimeNotifier
+                    });
                   },
                 ),
-                SizedBox(height: 16),
+
+                // // Waktu Tutup
+                // ListTile(
+                //   title: Text('Closing Time'),
+                //   subtitle: Text(_closingTime != null ? _closingTime!.toDate().toString() : 'Select closing time'),
+                //   trailing: Icon(Icons.access_time),
+                //   onTap: () async {
+                //     // Menampilkan DatePicker untuk memilih tanggal
+                //     DateTime? selectedDate = await showDatePicker(
+                //       context: context,
+                //       initialDate: DateTime.now(),
+                //       firstDate: DateTime(2000),
+                //       lastDate: DateTime(2101),
+                //     );
+
+                //     // Jika tanggal dipilih, lanjutkan memilih waktu
+                //     if (selectedDate != null) {
+                //       TimeOfDay? time = await showTimePicker(
+                //         context: context,
+                //         initialTime: TimeOfDay.now(),
+                //       );
+
+                //       // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
+                //       if (time != null) {
+                //         setState(() {
+                //           _closingTime = Timestamp.fromDate(DateTime(
+                //             selectedDate.year,
+                //             selectedDate.month,
+                //             selectedDate.day,
+                //             time.hour,
+                //             time.minute,
+                //           ));
+                //         });
+                //       }
+                //     }
+                //   },
+                // ),
+                // SizedBox(height: 16),
 
                 // Tombol Simpan Destination
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SmallButton(
-                    onPressed: uploadImage, // Memanggil fungsi saveDestination ketika tombol ditekan
-                    label: 'Save',
-                  ),
-                ),
-                SizedBox(height: 16),
+                // Align(
+                //   alignment: Alignment.bottomRight,
+                //   child: MediumButton(
+                //     onPressed: uploadImage, // Memanggil fungsi saveDestination ketika tombol ditekan
+                //     label: 'Save',
+                //   ),
+                // ),
+                SizedBox(height: 60),
               ],
             ),
           ),
         ),
       ),
+      floatingActionButton: MediumButton(
+        onPressed: uploadImage,
+        label: 'Save Destination',
+      ),
+      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 0),
     );
   }
 }

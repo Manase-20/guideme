@@ -3,12 +3,12 @@ import 'package:guideme/core/services/auth_provider.dart' as provider;
 import 'package:guideme/core/services/firebase_auth_service.dart';
 import 'package:guideme/dummy/create_map.dart';
 import 'package:guideme/dummy/image/upload_page.dart';
-import 'package:guideme/dummy/map_screen.dart';
-import 'package:guideme/controllers/user_controller.dart';
-import 'package:guideme/dummy/payment/payment_screen.dart';
+import 'package:guideme/dummy/xmap_screen.dart';
+import 'package:guideme/dummy/payment/dummy_payment_screen.dart';
 // import 'package:guideme/example/payment/payment_page.dart';
 import 'package:guideme/views/auth/login_screen.dart';
 import 'package:guideme/widgets/custom_navbar.dart';
+import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:provider/provider.dart';
 
 class ExampleScreen extends StatefulWidget {
@@ -19,8 +19,8 @@ class ExampleScreen extends StatefulWidget {
 }
 
 class _ExampleScreenState extends State<ExampleScreen> {
-  final UserController _userController = UserController();
-  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirebaseAuthService _auth = FirebaseAuthService();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggedIn = false;
 
   @override
@@ -31,7 +31,7 @@ class _ExampleScreenState extends State<ExampleScreen> {
 
   // Mengecek status login pengguna
   Future<void> _checkLoginStatus() async {
-    bool loggedIn = await _authService.isLoggedIn();
+    bool loggedIn = await _auth.isLoggedIn();
     if (loggedIn) {
       setState(() {
         _isLoggedIn = true;
@@ -47,7 +47,7 @@ class _ExampleScreenState extends State<ExampleScreen> {
 
   // Menangani logout
   Future<void> _handleLogout() async {
-     final authProvider = Provider.of<provider.AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<provider.AuthProvider>(context, listen: false);
     await authProvider.logout();
 
     // Menampilkan SnackBar setelah logout berhasil
@@ -65,18 +65,7 @@ class _ExampleScreenState extends State<ExampleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        actions: _isLoggedIn
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  tooltip: 'Logout',
-                  onPressed: _handleLogout,
-                ),
-              ]
-            : [],
-      ),
+      appBar: BurgerAppBar(scaffoldKey: _scaffoldKey),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         child: GridView.count(

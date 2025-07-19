@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:guideme/core/constants/constants.dart';
+import 'package:guideme/core/services/auth_provider.dart';
 import 'package:guideme/core/services/firebase_auth_service.dart';
 import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/core/utils/text_utils.dart';
@@ -10,8 +10,6 @@ import 'package:guideme/models/destination_model.dart';
 import 'package:guideme/models/event_model.dart';
 import 'package:guideme/views/user/detail_screen.dart';
 import 'package:guideme/widgets/custom_carousel.dart';
-import 'package:guideme/controllers/user_controller.dart';
-import 'package:guideme/views/auth/login_screen.dart';
 // import 'package:guideme/core/services/midtrans_service.dart';
 import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,7 +17,6 @@ import 'package:guideme/widgets/widgets.dart';
 import 'package:guideme/views/user/list_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:guideme/core/services/auth_provider.dart' as provider;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,20 +27,27 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirebaseAuthService _auth = FirebaseAuthService();
 
   bool _isLoggedIn = false;
-  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _checkLoginStatus();
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.initialize(); // Pastikan initialize dipanggil untuk memastikan data pengguna dimuat
+    // Supabase.initialize(
+    //   url: 'https://errgdpvuqptgmkobutnt.supabase.co',
+    //   anonKey:
+    //       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycmdkcHZ1cXB0Z21rb2J1dG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTg2MTAsImV4cCI6MjA0ODk3NDYxMH0.bOPICi0eFnqBFiNyufFgrVtXvradIylCNMenDFE0XHk',
+    // );
   }
 
   // Memeriksa status login dan memperbarui state
   Future<void> _checkLoginStatus() async {
-    bool loggedIn = await _authService.isLoggedIn();
+    bool loggedIn = await _auth.isLoggedIn();
     setState(() {
       _isLoggedIn = loggedIn;
     });
@@ -104,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         'Destination',
-                        style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.mediumBold,
                       ),
                       GestureDetector(
                         onTap: () {
@@ -129,30 +133,48 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                // StreamBuilder untuk event
+                // StreamBuilder untuk destination
                 StreamBuilder(
                   stream: FirebaseFirestore.instance
                       .collection('destinations')
-                      .orderBy('createdAt', descending: true) // Urutkan berdasarkan timestamp (waktu)
+                      .where('status', isEqualTo: 'open')
+                      .orderBy('rating', descending: true) // Urutkan berdasarkan timestamp (waktu)
                       .snapshots(),
                   builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                     if (!snapshot.hasData) {
                       return Center(child: CircularProgressIndicator());
                     }
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: SizedBox(
-                        height: 200, // Tinggi yang sesuai untuk daftar horizontal
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal, // Scroll horizontal
-                          itemCount: snapshot.data!.docs.length,
-                          itemBuilder: (context, index) {
-                            var doc = snapshot.data!.docs[index];
-                            Map<String, dynamic> event = doc.data() as Map<String, dynamic>;
-                            DestinationModel dataDestination = DestinationModel.fromMap(event, doc.id);
+                    // Batasi jumlah data maksimal 5
+                    final docs = snapshot.data!.docs.take(5).toList();
 
-                            return Row(
+                    return SizedBox(
+                      height: 200, // Tinggi yang sesuai untuk daftar horizontal
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal, // Scroll horizontal
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          var doc = snapshot.data!.docs[index];
+                          Map<String, dynamic> event = doc.data() as Map<String, dynamic>;
+                          DestinationModel newDestinationModel = DestinationModel.fromMap(event, doc.id);
+
+                          // Tentukan padding untuk item pertama dan terakhir
+                          EdgeInsetsGeometry padding = EdgeInsets.symmetric(horizontal: 0.0); // Default padding
+
+                          if (index == 0) {
+                            // Padding kiri untuk item pertama
+                            padding = EdgeInsets.only(left: 12.0);
+                          } else if (docs.length == 5 && index == 4) {
+                            // Jika ada 5 data, padding kanan hanya untuk item ke-4 (terakhir)
+                            padding = EdgeInsets.only(right: 8.0);
+                          } else if (docs.length < 5 && index == docs.length - 1) {
+                            // Jika kurang dari 5 data, padding kanan untuk item terakhir
+                            padding = EdgeInsets.only(right: 12.0);
+                          }
+
+                          return Padding(
+                            padding: padding,
+                            child: Row(
                               children: [
                                 SizedBox(
                                   width: MediaQuery.of(context).size.width * 0.44, // 50% dari lebar layar
@@ -163,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => DetailScreen(
-                                            data: dataDestination,
+                                            data: newDestinationModel,
                                             collectionName: 'destinations',
                                           ),
                                         ),
@@ -183,15 +205,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               top: Radius.circular(5),
                                               bottom: Radius.circular(5),
                                             ),
-                                            child: dataDestination.imageUrl.startsWith('/')
+                                            child: newDestinationModel.imageUrl.startsWith('/')
                                                 ? Image.file(
-                                                    File(dataDestination.imageUrl),
+                                                    File(newDestinationModel.imageUrl),
                                                     fit: BoxFit.cover,
                                                     height: 100,
                                                     width: double.infinity,
                                                   )
                                                 : Image.network(
-                                                    dataDestination.imageUrl,
+                                                    newDestinationModel.imageUrl,
                                                     fit: BoxFit.cover,
                                                     height: 100,
                                                     width: double.infinity,
@@ -205,8 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               Flexible(
                                                 flex: 3, // Membuat nama mengambil 3/4 dari lebar
                                                 child: Text(
-                                                  capitalizeEachWord(dataDestination.name),
-                                                  style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                                                  truncateText(capitalizeEachWord(newDestinationModel.name), 15),
+                                                  style: AppTextStyles.mediumBold,
                                                   maxLines: 2, // Membatasi hanya dua baris
                                                   overflow: TextOverflow.ellipsis, // Menambahkan ellipsis jika teks terlalu panjang
                                                 ),
@@ -221,8 +243,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   ),
                                                   SizedBox(width: 2),
                                                   Text(
-                                                    '${dataDestination.rating}',
-                                                    style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                                                    '${newDestinationModel.rating}',
+                                                    style: AppTextStyles.mediumBold,
                                                   ),
                                                 ],
                                               ),
@@ -233,8 +255,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               // Menampilkan harga
                                               Text(
-                                                capitalizeEachWord(dataDestination.location),
-                                                style: AppTextStyles.smallStyle.copyWith(color: AppColors.secondaryColor),
+                                                truncateText(capitalizeEachWord(newDestinationModel.location), 15),
+                                                style: AppTextStyles.smallGrey,
                                               ),
                                             ],
                                           ),
@@ -246,9 +268,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               // Menampilkan harga
                                               Text(
-                                                'Rp ${NumberFormat('#,##0', 'id_ID').format(dataDestination.price)}',
-                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                                newDestinationModel.price == 0
+                                                    ? 'Free' // Jika rating = 0, tampilkan "Free"
+                                                    : 'Rp ${NumberFormat('#,##0', 'id_ID').format(newDestinationModel.price)}', // Jika rating != 0, tampilkan harga
+                                                style: AppTextStyles.smallBold,
                                               ),
+
                                               // SmallButton(
                                               //   onPressed: () {
                                               //     // Navigator.push(
@@ -260,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               //     Navigator.push(
                                               //       context,
                                               //       MaterialPageRoute(
-                                              //         builder: (context) => DetailScreen(data: dataDestination),
+                                              //         builder: (context) => DetailScreen(data: newDestinationModel),
                                               //       ),
                                               //     );
                                               //   },
@@ -276,9 +301,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 if (index < snapshot.data!.docs.length - 1) // Jangan tambahkan pada Card terakhir
                                   SizedBox(width: 4.0), // Jarak antar Card
                               ],
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
@@ -297,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         'Event',
-                        style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.mediumBold,
                       ),
                       GestureDetector(
                         onTap: () {
@@ -326,26 +351,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 StreamBuilder(
                   stream: FirebaseFirestore.instance
                       .collection('events')
-                      .orderBy('createdAt', descending: true) // Urutkan berdasarkan timestamp (waktu)
+                      .where('status', isEqualTo: 'open')
+                      .orderBy('rating', descending: true) // Urutkan berdasarkan timestamp (waktu)
                       .snapshots(),
                   builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                     if (!snapshot.hasData) {
                       return Center(child: CircularProgressIndicator());
                     }
+                    // Batasi jumlah data maksimal 5
+                    final docs = snapshot.data!.docs.take(5).toList();
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: SizedBox(
-                        height: 200, // Tinggi yang sesuai untuk daftar horizontal
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal, // Scroll horizontal
-                          itemCount: snapshot.data!.docs.length,
-                          itemBuilder: (context, index) {
-                            var doc = snapshot.data!.docs[index];
-                            Map<String, dynamic> event = doc.data() as Map<String, dynamic>;
-                            EventModel dataEvent = EventModel.fromMap(event, doc.id);
+                    return SizedBox(
+                      height: 200, // Tinggi yang sesuai untuk daftar horizontal
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal, // Scroll horizontal
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          var doc = snapshot.data!.docs[index];
+                          Map<String, dynamic> event = doc.data() as Map<String, dynamic>;
+                          EventModel newEventModel = EventModel.fromMap(event, doc.id);
 
-                            return Row(
+                          // Tentukan padding untuk item pertama dan terakhir
+                          EdgeInsetsGeometry padding = EdgeInsets.symmetric(horizontal: 0.0); // Default padding
+
+                          if (index == 0) {
+                            // Padding kiri untuk item pertama
+                            padding = EdgeInsets.only(left: 12.0);
+                          } else if (docs.length == 5 && index == 4) {
+                            // Jika ada 5 data, padding kanan hanya untuk item ke-4 (terakhir)
+                            padding = EdgeInsets.only(right: 8.0);
+                          } else if (docs.length < 5 && index == docs.length - 1) {
+                            // Jika kurang dari 5 data, padding kanan untuk item terakhir
+                            padding = EdgeInsets.only(right: 12.0);
+                          }
+
+                          return Padding(
+                            padding: padding,
+                            child: Row(
                               children: [
                                 SizedBox(
                                   width: MediaQuery.of(context).size.width * 0.44,
@@ -356,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => DetailScreen(
-                                            data: dataEvent,
+                                            data: newEventModel,
                                             collectionName: 'events',
                                           ),
                                         ),
@@ -376,15 +418,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               top: Radius.circular(5),
                                               bottom: Radius.circular(5),
                                             ),
-                                            child: dataEvent.imageUrl.startsWith('/')
+                                            child: newEventModel.imageUrl.startsWith('/')
                                                 ? Image.file(
-                                                    File(dataEvent.imageUrl),
+                                                    File(newEventModel.imageUrl),
                                                     fit: BoxFit.cover,
                                                     height: 100,
                                                     width: double.infinity,
                                                   )
                                                 : Image.network(
-                                                    dataEvent.imageUrl,
+                                                    newEventModel.imageUrl,
                                                     fit: BoxFit.cover,
                                                     height: 100,
                                                     width: double.infinity,
@@ -398,8 +440,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               Flexible(
                                                 flex: 3, // Membuat nama mengambil 3/4 dari lebar
                                                 child: Text(
-                                                  capitalizeEachWord(dataEvent.name),
-                                                  style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                                                  capitalizeEachWord(newEventModel.name),
+                                                  style: AppTextStyles.mediumBold,
                                                   maxLines: 2, // Membatasi hanya dua baris
                                                   overflow: TextOverflow.ellipsis, // Menambahkan ellipsis jika teks terlalu panjang
                                                 ),
@@ -414,8 +456,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   ),
                                                   SizedBox(width: 2),
                                                   Text(
-                                                    '${dataEvent.rating}',
-                                                    style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                                                    '${newEventModel.rating}',
+                                                    style: AppTextStyles.mediumBold,
                                                   ),
                                                 ],
                                               ),
@@ -426,8 +468,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               // Menampilkan harga
                                               Text(
-                                                capitalizeEachWord(dataEvent.location),
-                                                style: AppTextStyles.smallStyle.copyWith(color: AppColors.secondaryColor),
+                                                truncateText(capitalizeEachWord(newEventModel.location), 15),
+                                                style: AppTextStyles.smallGrey,
                                               ),
                                             ],
                                           ),
@@ -439,15 +481,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               // Menampilkan harga
                                               Text(
-                                                'Rp ${NumberFormat('#,##0', 'id_ID').format(dataEvent.price)}',
-                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                                newEventModel.price == 0
+                                                    ? 'Free' // Jika rating = 0, tampilkan "Free"
+                                                    : 'Rp ${NumberFormat('#,##0', 'id_ID').format(newEventModel.price)}', // Jika rating != 0, tampilkan harga
+                                                style: AppTextStyles.smallBold,
                                               ),
                                               // SmallButton(
                                               //   onPressed: () {
                                               //     Navigator.push(
                                               //       context,
                                               //       MaterialPageRoute(
-                                              //         builder: (context) => DetailScreen(data: dataEvent),
+                                              //         builder: (context) => DetailScreen(data: newEventModel),
                                               //       ),
                                               //     );
                                               //   },
@@ -463,9 +507,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 if (index < snapshot.data!.docs.length - 1) // Jangan tambahkan pada Card terakhir
                                   SizedBox(width: 4.0), // Jarak antar Card
                               ],
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },

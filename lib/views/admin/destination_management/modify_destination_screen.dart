@@ -1,11 +1,13 @@
 // import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/material.dart';
 import 'package:guideme/controllers/category_controller.dart';
 import 'package:guideme/controllers/destination_controller.dart';
 import 'package:guideme/models/destination_model.dart';
+import 'package:guideme/widgets/custom_card.dart';
 import 'package:guideme/widgets/custom_form.dart';
 import 'package:guideme/widgets/widgets.dart';
 import 'package:image_picker/image_picker.dart';
@@ -70,8 +72,6 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
     closingTimeNotifier = ValueNotifier(widget.destinationModel.closingTime);
 
     imageUrl = widget.destinationModel.imageUrl;
-    // Mencetak nilai imageUrl pada saat pertama kali membuka halaman
-    print("Nilai imageUrl saat pertama kali membuka halaman: $imageUrl");
     selectedLocation = LatLng(widget.destinationModel.latitude, widget.destinationModel.longitude);
     latitude = widget.destinationModel.latitude;
     longitude = widget.destinationModel.longitude;
@@ -206,9 +206,7 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BackAppBar(
-        title: 'Back',
-      ),
+      appBar: BackAppBar(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -217,10 +215,11 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                CustomFormTitle(firstText: 'Modify Destination', secondText: 'Update your destination details.'),
                 ValueListenableBuilder<String>(
                   valueListenable: nameNotifier,
                   builder: (context, name, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _nameController,
                       label: 'Destination Name',
                       // onChanged: (value) => nameNotifier.value = value,
@@ -240,7 +239,7 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: locationNotifier,
                   builder: (context, location, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _locationController,
                       label: 'Destination Location',
                       // onChanged: (value) => locationNotifier.value = value,
@@ -258,74 +257,76 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 SizedBox(height: 20),
 
                 // map
-                Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isMapExpanded = !_isMapExpanded;
-                        });
-                      },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: AnimatedContainer(
-                          duration: Duration(milliseconds: 300),
-                          height: _isMapExpanded ? MediaQuery.of(context).size.height : MediaQuery.of(context).size.height / 4,
-                          width: double.infinity,
-                          child: FlutterMap(
-                            mapController: _mapController,
-                            options: MapOptions(
-                              // initialCenter: LatLng(1.054507, 104.004120),
-                              initialCenter: LatLng(latitude!, longitude!),
-                              onTap: (_, point) {
-                                setState(() {
-                                  selectedLocation = point;
-                                });
-                              },
-                            ),
-                            children: [
-                              TileLayer(
-                                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // Updated URL without subdomains
-                              ),
-                              if (selectedLocation != null)
-                                MarkerLayer(
-                                  markers: [
-                                    Marker(
-                                      point: selectedLocation!,
-                                      width: 40,
-                                      height: 40,
-                                      child: Icon(Icons.location_pin, color: Colors.red),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: IconButton(
-                        icon: Icon(
-                          _isMapExpanded ? Icons.fullscreen_exit : Icons.fullscreen,
-                          color: Colors.black,
-                        ),
-                        onPressed: () {
+                MainCard(
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
                           setState(() {
                             _isMapExpanded = !_isMapExpanded;
                           });
                         },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(5),
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 300),
+                            height: _isMapExpanded ? MediaQuery.of(context).size.height : MediaQuery.of(context).size.height / 4,
+                            width: double.infinity,
+                            child: FlutterMap(
+                              mapController: _mapController,
+                              options: MapOptions(
+                                // initialCenter: LatLng(1.054507, 104.004120),
+                                initialCenter: LatLng(latitude!, longitude!),
+                                onTap: (_, point) {
+                                  setState(() {
+                                    selectedLocation = point;
+                                  });
+                                },
+                              ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // Updated URL without subdomains
+                                ),
+                                if (selectedLocation != null)
+                                  MarkerLayer(
+                                    markers: [
+                                      Marker(
+                                        point: selectedLocation!,
+                                        width: 40,
+                                        height: 40,
+                                        child: Icon(Icons.location_pin, color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: IconButton(
+                          icon: Icon(
+                            _isMapExpanded ? Icons.fullscreen_exit : Icons.fullscreen,
+                            color: Colors.black,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isMapExpanded = !_isMapExpanded;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 20),
 
                 ValueListenableBuilder<String>(
                   valueListenable: organizerNotifier,
                   builder: (context, organizer, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _organizerController,
                       label: 'Destination Organizer',
                       // onChanged: (value) => organizerNotifier.value = value,
@@ -342,63 +343,85 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ),
                 SizedBox(height: 20),
 
+                // Dropdown untuk memilih kategori
                 StreamBuilder<List<String>>(
                   stream: _categoryController.getCategories(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return CircularProgressIndicator();
                     }
-                    return CustomDropdown(
+                    return TextDropdown(
                       label: 'Category',
-                      items: snapshot.data!,
-                      value: selectedCategory,
+                      items: ['destination'], // Hanya memiliki satu item tetap
+                      value: selectedCategory, // Menampilkan nilai _selectedCategory
+                      enabled: false, // Dropdown dapat dipilih (diubah)
                       onChanged: (value) {
                         setState(() {
-                          selectedCategory = value;
-                          selectedSubcategory = null;
+                          selectedCategory = value ?? 'destination'; // Memperbarui _selectedCategory ketika ada perubahan
                         });
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please select a category';
+                          return 'Category is required';
+                        }
+                        return null;
+                      },
+                      // label: 'Category',
+                      // items: snapshot.data ?? [],
+                      // value: selectedCategory,
+                      // onChanged: (value) {
+                      //   setState(() {
+                      //     selectedCategory = value;
+                      //     selectedSubcategory = null; // Reset subkategori
+                      //   });
+                      // },
+                      // validator: (value) {
+                      //   if (value == null || value.isEmpty) {
+                      //     return 'Please select a category';
+                      //   }
+                      //   return null;
+                      // },
+                    );
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Dropdown untuk memilih subkategori
+                StreamBuilder<List<String>>(
+                  stream: selectedCategory != null ? _categoryController.getSubcategories(selectedCategory!) : Stream.value([]),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return TextDropdown(
+                        label: 'Subcategory',
+                        items: [],
+                        enabled: false,
+                      );
+                    }
+                    return TextDropdown(
+                      label: 'Subcategory',
+                      items: snapshot.data ?? [],
+                      value: selectedSubcategory,
+                      enabled: selectedCategory != null,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedSubcategory = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a subcategory';
                         }
                         return null;
                       },
                     );
                   },
                 ),
-                SizedBox(height: 20),
-                if (selectedCategory != null)
-                  StreamBuilder<List<String>>(
-                    stream: _categoryController.getSubcategories(selectedCategory!),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return CircularProgressIndicator();
-                      }
-                      return CustomDropdown(
-                        label: 'Subcategory',
-                        items: snapshot.data!,
-                        value: selectedSubcategory,
-                        onChanged: (value) {
-                          setState(() {
-                            selectedSubcategory = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a subcategory';
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                  ),
-                SizedBox(height: 20),
+                SizedBox(height: 16),
 
                 ValueListenableBuilder<String>(
                   valueListenable: descriptionNotifier,
                   builder: (context, description, _) {
-                    return CustomTextField(
+                    return TextArea(
                       controller: _descriptionController,
                       label: 'Destination Description',
                       onChanged: (value) => descriptionNotifier.value = value,
@@ -411,7 +434,7 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: informationNotifier,
                   builder: (context, information, _) {
-                    return CustomTextField(
+                    return TextArea(
                       controller: _informationController,
                       label: 'Destination Information',
                       onChanged: (value) => informationNotifier.value = value,
@@ -424,9 +447,11 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: priceNotifier,
                   builder: (context, price, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _priceController,
                       label: 'Destination Price',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       onChanged: (value) => priceNotifier.value = value,
                       validator: (value) => value == null || value.isEmpty ? 'Price is required' : null,
                     );
@@ -434,7 +459,7 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ),
                 SizedBox(height: 20),
 
-                CustomDropdown(
+                TextDropdown(
                   label: 'Status',
                   items: ['open', 'close'],
                   value: selectedStatus,
@@ -459,96 +484,48 @@ class _ModifyDestinationScreenState extends State<ModifyDestinationScreen> {
                 ),
 
                 // Waktu Buka
-                ListTile(
-                  title: Text('Opening Time'),
-                  subtitle: Text(
-                    openingTimeNotifier != null ? (openingTimeNotifier.value).toDate().toString() : 'Select opening time',
-                  ),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          openingTimeNotifier.value = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Opening Date Time',
+                  subtitle: openingTimeNotifier.value != null ? (openingTimeNotifier.value).toDate().toString() : 'Select closing date time',
+                  selectedTime: openingTimeNotifier.value, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      openingTimeNotifier.value = selectedTime; // Mengupdate openingTimeNotifier
+                    });
                   },
                 ),
                 SizedBox(height: 20),
 
                 // Waktu Tutup
-                ListTile(
-                  title: Text('Closing Time'),
-                  subtitle: Text(
-                    closingTimeNotifier != null ? (closingTimeNotifier!.value as Timestamp).toDate().toString() : 'Select closing time',
-                  ),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          closingTimeNotifier.value = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Closing Date Time',
+                  subtitle: closingTimeNotifier.value != null ? (closingTimeNotifier.value).toDate().toString() : 'Select closing date time',
+                  selectedTime: closingTimeNotifier.value, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      closingTimeNotifier.value = selectedTime; // Mengupdate closingTimeNotifier
+                    });
                   },
                 ),
-                SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SmallButton(
-                    onPressed: _saveChanges,
-                    label: 'Save',
-                  ),
-                ),
+                SizedBox(height: 60),
+
+                // Align(
+                //   alignment: Alignment.bottomRight,
+                //   child: MediumButton(
+                //     onPressed: _saveChanges,
+                //     label: 'Save',
+                //   ),
+                // ),
               ],
             ),
           ),
         ),
       ),
+      floatingActionButton: MediumButton(
+        onPressed: _saveChanges,
+        label: 'Save Changes',
+      ),
+      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 1),
     );
   }
 }

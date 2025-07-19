@@ -1,79 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-
-// class AuthProvider with ChangeNotifier {
-//   String? _uid;
-//   String? _username;
-//   String? _email;
-//   String? _role;
-//   String? _profilePicture;
-//   bool _isLoading = false;
-
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-//   // Getter
-//   String? get uid => _uid;
-//   String? get username => _username;
-//   String? get email => _email;
-//   String? get role => _role;
-//   String? get profilePicture => _profilePicture;
-//   bool get isLoading => _isLoading;
-
-//   // Menambahkan getter untuk status login
-//   bool get isLoggedIn => _auth.currentUser != null;
-
-//   // Menambahkan getter untuk cek role
-//   bool get isUser => _role == 'user';
-//   bool get isAdmin => _role == 'admin';
-
-//   // Fungsi untuk mendapatkan data pengguna saat ini
-//   Future<void> fetchCurrentUser() async {
-//     _isLoading = true;
-//     notifyListeners();
-
-//     User? user = _auth.currentUser;
-//     if (user != null) {
-//       try {
-//         DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-//         if (userDoc.exists) {
-//           _uid = user.uid;
-//           _username = userDoc['username'];
-//           _email = userDoc['email'];
-//           _role = userDoc['role']; // Pastikan role disimpan di sini
-//           _profilePicture = userDoc['profilePicture']; // Pastikan role disimpan di sini
-//           print(role);
-//         }
-//       } catch (e) {
-//         print('Error fetching user data: $e');
-//       }
-//     }
-//     _isLoading = false;
-//     notifyListeners();
-//   }
-
-//   // Fungsi untuk logout
-//   Future<void> logout() async {
-//     try {
-//       await _auth.signOut();
-//       // Reset semua data di provider
-//       _uid = null;
-//       _username = null;
-//       _email = null;
-//       _role = null;
-//       notifyListeners(); // Memberi tahu UI bahwa data telah direset
-//     } catch (e) {
-//       print('Logout failed: $e');
-//     }
-//   }
-// }
-
-
-
-
-
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -191,86 +115,20 @@ class AuthProvider with ChangeNotifier {
     _profilePicture = null;
     notifyListeners();
   }
+
+  // Fungsi untuk mendapatkan URL gambar profil
+  Future<String?> getProfilePicture() async {
+    if (_profilePicture == null && _uid != null) {
+      try {
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(_uid).get();
+        if (userDoc.exists) {
+          _profilePicture = userDoc['profilePicture'];
+          await _saveUserDataToPreferences();
+        }
+      } catch (e) {
+        print('Error fetching profile picture: $e');
+      }
+    }
+    return _profilePicture;
+  }
 }
-
-
-
-
-// import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-
-// class AuthProvider with ChangeNotifier {
-//   String? _uid;
-//   String? _username;
-//   String? _email;
-//   String? _role;
-//   String? _profilePicture;
-//   bool _isLoading = false;
-
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-//   // Getter
-//   String? get uid => _uid;
-//   String? get username => _username;
-//   String? get email => _email;
-//   String? get role => _role;
-//   String? get profilePicture => _profilePicture;
-//   bool get isLoading => _isLoading;
-
-//   bool get isLoggedIn => _auth.currentUser != null;
-//   bool get isUser => _role == 'user';
-//   bool get isAdmin => _role == 'admin';
-
-//   // Inisialisasi saat aplikasi pertama kali dijalankan
-//   Future<void> initialize() async {
-//     if (isLoggedIn && _uid == null) {
-//       await fetchCurrentUser();
-//     }
-//   }
-  
-
-//   // Mendapatkan data pengguna
-//   Future<void> fetchCurrentUser() async {
-//     _isLoading = true;
-//     notifyListeners();
-
-//     User? user = _auth.currentUser;
-//     if (user != null) {
-//       try {
-//         DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-//         if (userDoc.exists) {
-//           _uid = user.uid;
-//           _username = userDoc['username'];
-//           _email = userDoc['email'];
-//           _role = userDoc['role'];
-//           _profilePicture = userDoc['profilePicture'];
-//         }
-//       } catch (e) {
-//         print('Error fetching user data: $e');
-//       }
-//     }
-//     _isLoading = false;
-//     notifyListeners();
-//   }
-
-//   // Logout
-//   Future<void> logout() async {
-//     try {
-//       await _auth.signOut();
-//       _resetData();
-//     } catch (e) {
-//       print('Logout failed: $e');
-//     }
-//   }
-
-//   void _resetData() {
-//     _uid = null;
-//     _username = null;
-//     _email = null;
-//     _role = null;
-//     _profilePicture = null;
-//     notifyListeners();
-//   }
-// }

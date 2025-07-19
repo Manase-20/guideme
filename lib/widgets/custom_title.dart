@@ -20,7 +20,7 @@ class TitlePage extends StatelessWidget {
       children: [
         // Title
         Padding(
-          padding: const EdgeInsets.only(bottom: 10.0),
+          padding: const EdgeInsets.only(bottom: 4.0),
           child: Text(
             title,
             style: AppTextStyles.titleStyle,
@@ -41,7 +41,7 @@ class TitlePage extends StatelessWidget {
           ),
           child: Text(
             subtitle,
-            style: AppTextStyles.bodyStyle.copyWith(
+            style: AppTextStyles.bodyBlack.copyWith(
               color: AppColors.secondaryColor,
             ),
           ),
@@ -68,14 +68,14 @@ class CustomTitle extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               firstText,
-              style: AppTextStyles.mediumStyle.copyWith(color: AppColors.secondaryColor),
+              style: AppTextStyles.mediumBlack.copyWith(color: AppColors.secondaryColor),
             ),
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               secondText,
-              style: AppTextStyles.bodyStyle.copyWith(fontWeight: FontWeight.w800),
+              style: AppTextStyles.bodyBlack.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -97,11 +97,11 @@ class CustomTitle2 extends StatelessWidget {
       children: [
         Text(
           firstText,
-          style: AppTextStyles.mediumStyle.copyWith(color: AppColors.secondaryColor),
+          style: AppTextStyles.mediumBlack.copyWith(color: AppColors.secondaryColor),
         ),
         Text(
           secondText,
-          style: AppTextStyles.bodyStyle.copyWith(fontWeight: FontWeight.w800),
+          style: AppTextStyles.bodyBlack.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );
@@ -121,11 +121,11 @@ class CustomFormTitle extends StatelessWidget {
       children: [
         Text(
           firstText,
-          style: AppTextStyles.bodyStyle.copyWith(fontWeight: FontWeight.w800),
+          style: AppTextStyles.bodyBlack.copyWith(fontWeight: FontWeight.w800),
         ),
         Text(
           secondText,
-          style: AppTextStyles.mediumStyle.copyWith(color: AppColors.secondaryColor),
+          style: AppTextStyles.mediumBlack.copyWith(color: AppColors.secondaryColor),
         ),
         SizedBox(
           height: 24,

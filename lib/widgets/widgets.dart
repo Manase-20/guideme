@@ -1,7 +1,6 @@
 export 'auth_text_field.dart';
 export 'back_app_bar.dart';
 export 'custom_appbar.dart';
-export 'medium_button.dart';
 export 'custom_button.dart';
 export 'message_dialog.dart';
 export 'slide_animation.dart';

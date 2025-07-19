@@ -22,13 +22,13 @@
 //         page = DashboardScreen(); // Halaman Dashboard
 //         break;
 //       case 1:
-//         page = UserScreen(); // Halaman Manajemen Pengguna
+//         page = UserManagementScreen(); // Halaman Manajemen Pengguna
 //         break;
 //       case 2:
-//         page = EventScreen(); // Halaman Manajemen Acara
+//         page = EventManagementScreen(); // Halaman Manajemen Acara
 //         break;
 //       case 3:
-//         page = CategoryScreen(); // Halaman Manajemen Acara
+//         page = CategoryManagementScreen(); // Halaman Manajemen Acara
 //         break;
 //       case 4:
 //         page = GalleryManagementScreen(); // Halaman Manajemen Acara
@@ -118,7 +118,8 @@ import 'package:guideme/views/admin/dashboard_screen.dart';
 import 'package:guideme/core/constants/constants.dart';
 import 'package:guideme/views/user/home_screen.dart';
 import 'package:guideme/views/user/gallery_screen.dart';
-import 'package:guideme/views/user/profile/profile.dart';
+import 'package:guideme/views/user/profile/profile_screen.dart';
+import 'package:guideme/views/user/search_screen.dart';
 import 'package:guideme/views/user/ticket/ticket_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -137,13 +138,13 @@ class AdminBottomNavBar extends StatelessWidget {
         page = DashboardScreen();
         break;
       case 1:
-        page = DestinationScreen();
+        page = DestinationManagementScreen();
         break;
       case 2:
-        page = EventScreen();
+        page = EventManagementScreen();
         break;
       case 3:
-        page = CategoryScreen();
+        page = CategoryManagementScreen();
         break;
       case 4:
         page = GalleryManagementScreen();
@@ -253,7 +254,7 @@ class UserBottomNavBar extends StatelessWidget {
         page = TicketScreen();
         break;
       case 2:
-        page = ProfileScreen();
+        page = SearchScreen();
         break;
       case 3:
         page = GalleryScreen();
@@ -262,7 +263,7 @@ class UserBottomNavBar extends StatelessWidget {
         page = ProfileScreen();
         break;
       default:
-        page = ProfileScreen();
+        page = HomeScreen();
     }
 
     // Menggunakan PageRouteBuilder dengan transisi fade

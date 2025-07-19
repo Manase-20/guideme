@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:guideme/core/constants/constants.dart';
 import 'package:guideme/main.dart';
 import 'package:guideme/models/gallery_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:guideme/widgets/custom_snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,13 +22,20 @@ class GalleryController {
     });
   }
 
-  // Stream<List<String>> getGalleriesName() {
-  //   return _firestore.collection('destinations').snapshots().map((snapshot) {
-  //     return snapshot.docs.map((doc) {
-  //       return doc['name'] as String;
-  //     }).toList();
-  //   });
-  // }
+  Stream<List<Map<String, String>>> getGalleryNames(String category, String subcategory) {
+    var collectionName = category + 's';
+
+    return _firestore.collection(collectionName).where('category', isEqualTo: category).where('subcategory', isEqualTo: subcategory).snapshots().map((snapshot) {
+      // Mengembalikan daftar nama dan recommendationId dalam bentuk Map
+      return snapshot.docs.map((doc) {
+        print('Document ID view: ${doc.id}'); // Debugging
+        return {
+          'name': doc['name'] as String,
+          'recommendationId': doc.id, // Menyimpan doc.id sebagai recommendationId
+        };
+      }).toList();
+    });
+  }
 
   Stream<List<String>> getNamesByCategory(String category) {
     String collectionName;
@@ -146,7 +155,7 @@ class GalleryController {
   //   await _firestore.collection('galleries').doc(galleryId).delete();
   // }
 
-  Future<void> deleteGallery(String galleryId) async {
+  Future<void> deleteGallery(BuildContext context, String galleryId) async {
     try {
       // Ambil data gallery dari Firebase terlebih dahulu
       final gallerySnapshot = await _firestore.collection('galleries').doc(galleryId).get();
@@ -201,11 +210,22 @@ class GalleryController {
 
         // Setelah gambar dihapus, hapus data gallery dari Firebase
         await _firestore.collection('galleries').doc(galleryId).delete();
-        print('Gallery document deleted from Firebase.');
+        // print('Gallery document deleted from Firebase.');
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(
+              "Gallery successfully deleted.",
+              style: AppTextStyles.mediumWhiteBold,
+            ),
+            backgroundColor: AppColors.redColor,
+          ),
+        );
       } else {
+        DangerSnackBar.show(context, 'Gallery not found.');
         throw Exception('Gallery not found');
       }
     } catch (error) {
+      DangerSnackBar.show(context, 'Error while deleting gallery: $error');
       print('Error while deleting gallery: $error');
       rethrow;
     }
@@ -225,7 +245,6 @@ class GalleryController {
     return localFile.path;
   }
 }
-
 
 // import 'dart:io';
 // import 'package:supabase_flutter/supabase_flutter.dart';

@@ -4,12 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guideme/controllers/gallery_controller.dart';
 import 'package:guideme/core/constants/colors.dart';
 import 'package:guideme/core/constants/text_styles.dart';
+import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/core/utils/text_utils.dart';
 import 'package:guideme/models/gallery_model.dart';
-import 'package:guideme/views/admin/gallery_management/create_gallery_screen.dart';
-import 'package:guideme/views/admin/gallery_management/modify_gallery_screen.dart';
 import 'package:guideme/widgets/custom_navbar.dart';
 import 'package:guideme/widgets/custom_button.dart';
+import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:guideme/widgets/custom_title.dart';
 
 class GalleryManagementScreen extends StatefulWidget {
@@ -20,13 +20,18 @@ class GalleryManagementScreen extends StatefulWidget {
 }
 
 class _GalleryManagementScreenState extends State<GalleryManagementScreen> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   String page = 'gallery';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Gallery Management"),
+      key: scaffoldKey,
+      appBar: BurgerAppBar(scaffoldKey: scaffoldKey),
+      drawer: CustomAdminSidebar(
+        onLogout: () {
+          handleLogout(context);
+        },
       ),
       body: GalleryManagementScreenContent(),
       floatingActionButton: Padding(
@@ -57,149 +62,163 @@ class GalleryManagementScreenContent extends StatelessWidget {
           ),
           SizedBox(height: 16),
           StreamBuilder(
-            stream: FirebaseFirestore.instance.collection('galleries').snapshots(),
+            stream: FirebaseFirestore.instance.collection('galleries').orderBy('createdAt', descending: true).snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
               if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
-              Map<String, List<GalleryModel>> groupedByName = {};
+              // Mengelompokkan data berdasarkan nama dan kategori
+              Map<String, Map<String, List<GalleryModel>>> groupedByNameAndCategory = {};
               for (var doc in snapshot.data!.docs) {
                 Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-                GalleryModel galleryModel = GalleryModel.fromMap(data, doc.id);
+                GalleryModel newGalleryModel = GalleryModel.fromMap(data, doc.id);
 
-                if (groupedByName[galleryModel.name] == null) {
-                  groupedByName[galleryModel.name] = [];
+                // Mengelompokkan berdasarkan nama
+                if (groupedByNameAndCategory[newGalleryModel.name] == null) {
+                  groupedByNameAndCategory[newGalleryModel.name] = {};
                 }
-                groupedByName[galleryModel.name]!.add(galleryModel);
+
+                // Mengelompokkan berdasarkan kategori
+                if (groupedByNameAndCategory[newGalleryModel.name]![newGalleryModel.category] == null) {
+                  groupedByNameAndCategory[newGalleryModel.name]![newGalleryModel.category] = [];
+                }
+
+                groupedByNameAndCategory[newGalleryModel.name]![newGalleryModel.category]!.add(newGalleryModel);
               }
 
               return Column(
-                children: groupedByName.entries.map((entry) {
-                  String name = entry.key;
-                  List<GalleryModel> galleries = entry.value;
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: groupedByNameAndCategory.entries.map((nameEntry) {
+                  String name = nameEntry.key;
+                  Map<String, List<GalleryModel>> categories = nameEntry.value;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(
-                          capitalizeEachWord(name),
-                          style: AppTextStyles.bodyStyle.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: galleries.map((galleryModel) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                              child: SizedBox(
-                                width: MediaQuery.of(context).size.width * 1 - 24,
-                                child: Card(
-                                  color: AppColors.backgroundColor,
-                                  elevation: 3,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
-                                        child: galleryModel.imageUrl.startsWith('/')
-                                            ? Image.file(
-                                                File(galleryModel.imageUrl),
-                                                fit: BoxFit.cover,
-                                                height: 150,
-                                                width: double.infinity,
-                                              )
-                                            : Image.network(
-                                                galleryModel.imageUrl,
-                                                fit: BoxFit.cover,
-                                                height: 150,
-                                                width: double.infinity,
-                                              ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Center(
-                                        child: Text(
-                                          capitalizeEachWord(galleryModel.name),
-                                          style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+                    children: categories.entries.map((categoryEntry) {
+                      // String category = categoryEntry.key;
+                      List<GalleryModel> galleries = categoryEntry.value;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              capitalizeEachWord(name),
+                              style: AppTextStyles.mediumBlackBold,
+                            ),
+                          ),
+                          Container(
+                            height: MediaQuery.of(context).size.height * 1 / 4.2, // Adjust height as needed for other content
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              scrollDirection: Axis.horizontal,
+                              itemCount: galleries.length,
+                              itemBuilder: (context, index) {
+                                final newGalleryModel = galleries[index];
+
+                                // Tentukan padding untuk item pertama dan terakhir
+                                EdgeInsetsGeometry padding = EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0); // Default padding
+
+                                if (index == 0) {
+                                  // Padding kiri 12 untuk data pertama
+                                  padding = EdgeInsets.only(left: 12.0, right: 4.0, top: 8, bottom: 8);
+                                } else if (index == galleries.length - 1) {
+                                  // Padding kanan 12 untuk data terakhir
+                                  padding = EdgeInsets.only(right: 12.0, left: 4.0, top: 8, bottom: 8);
+                                }
+
+                                return Padding(
+                                  padding: padding,
+                                  child: Container(
+                                    width: MediaQuery.of(context).size.width * 1 / 2, // Width for the image
+                                    height: MediaQuery.of(context).size.height * 1 / 2, // Adjust height as needed for other content
+                                    child: Column(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                                          child: newGalleryModel.imageUrl.startsWith('/')
+                                              ? Image.file(
+                                                  File(newGalleryModel.imageUrl),
+                                                  fit: BoxFit.cover,
+                                                  width: MediaQuery.of(context).size.width * 1 / 2,
+                                                  height: (MediaQuery.of(context).size.width * 1 / 2) * (2 / 3), // Maintain 3:2 ratio
+                                                )
+                                              : Image.network(
+                                                  newGalleryModel.imageUrl,
+                                                  fit: BoxFit.cover,
+                                                  width: MediaQuery.of(context).size.width * 1 / 2,
+                                                  height: (MediaQuery.of(context).size.width * 1 / 2) * (2 / 3), // Maintain 3:2 ratio
+                                                ),
                                         ),
-                                      ),
-                                      // Menambahkan Row untuk posisi tombol Detail dan tombol Aksi
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          // Tombol Detail di pojok kiri
-                                          TextButton(
-                                            onPressed: () {
-                                              // Menampilkan dialog dengan informasi lengkap
-                                              showDialog(
-                                                context: context,
-                                                builder: (BuildContext context) {
-                                                  return AlertDialog(
-                                                    backgroundColor: AppColors.backgroundColor,
-                                                    title: Text(capitalizeEachWord(galleryModel.name)),
-                                                    content: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        // Menampilkan imageUrl sebagai teks
-                                                        Text('Image URL: ${galleryModel.imageUrl}'),
-                                                        SizedBox(height: 8),
-                                                        Text('Category: ${galleryModel.category}'),
-                                                        Text('Subcategory: ${galleryModel.subcategory}'),
-                                                        Text('Uploaded At: ${galleryModel.createdAt.toDate()}'),
+                                        // Menambahkan Row untuk posisi tombol Detail dan tombol Aksi
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            // Tombol Detail di pojok kiri
+                                            IconButton(
+                                              onPressed: () {
+                                                // Menampilkan dialog dengan informasi lengkap
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (BuildContext context) {
+                                                    return AlertDialog(
+                                                      backgroundColor: AppColors.backgroundColor,
+                                                      title: Text(capitalizeEachWord(newGalleryModel.name)),
+                                                      content: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          // Menampilkan imageUrl sebagai teks
+                                                          Text('Image URL: ${newGalleryModel.imageUrl}'),
+                                                          SizedBox(height: 8),
+                                                          Text('Category: ${newGalleryModel.category}'),
+                                                          Text('Subcategory: ${newGalleryModel.subcategory}'),
+                                                          Text('Uploaded At: ${newGalleryModel.createdAt.toDate()}'),
+                                                        ],
+                                                      ),
+                                                      actions: [
+                                                        MediumButton(
+                                                          label: 'Close',
+                                                          onPressed: () {
+                                                            // Menutup dialog
+                                                            Navigator.pop(context);
+                                                          },
+                                                        )
                                                       ],
-                                                    ),
-                                                    actions: [
-                                                      SmallButton(
-                                                        label: 'Close',
-                                                        onPressed: () {
-                                                          // Menutup dialog
-                                                          Navigator.pop(context);
-                                                        },
-                                                      )
-                                                    ],
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(5),
-                                                    ),
-                                                  );
-                                                },
-                                              );
-                                            },
-                                            child: Text(
-                                              'Detail',
-                                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                              icon: Icon(Icons.info, color: Colors.blue),
                                             ),
-                                          ),
-                                          // Tombol Action di pojok kanan
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                            child: Row(
+                                            // Tombol Action di pojok kanan
+                                            Row(
                                               children: [
-                                                EditButton(data: galleryModel, page: 'gallery'),
+                                                EditButton(data: newGalleryModel, page: 'gallery'),
                                                 SizedBox(width: 8),
                                                 DeleteButton(
-                                                  itemId: galleryModel.galleryId,
+                                                  itemId: newGalleryModel.galleryId,
                                                   itemType: 'gallery',
                                                   controller: _galleryController,
                                                 ),
                                               ],
-                                            ),
-                                          )
-                                        ],
-                                      ),
-                                    ],
+                                            )
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                    ],
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                        ],
+                      );
+                    }).toList(),
                   );
                 }).toList(),
               );
@@ -209,7 +228,8 @@ class GalleryManagementScreenContent extends StatelessWidget {
         ],
       ),
     );
-
+  }
+}
     // return Column(
     //   mainAxisAlignment: MainAxisAlignment.start,
     //   children: [
@@ -231,13 +251,13 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //           Map<String, List<GalleryModel>> groupedByName = {};
     //           for (var doc in snapshot.data!.docs) {
     //             Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    //             GalleryModel galleryModel = GalleryModel.fromMap(data, doc.id);
+    //             GalleryModel newGalleryModel = GalleryModel.fromMap(data, doc.id);
 
     //             // Kelompokkan berdasarkan name
-    //             if (groupedByName[galleryModel.name] == null) {
-    //               groupedByName[galleryModel.name] = [];
+    //             if (groupedByName[newGalleryModel.name] == null) {
+    //               groupedByName[newGalleryModel.name] = [];
     //             }
-    //             groupedByName[galleryModel.name]!.add(galleryModel);
+    //             groupedByName[newGalleryModel.name]!.add(newGalleryModel);
     //           }
 
     //           return Column(
@@ -259,14 +279,14 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //                           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
     //                           child: Text(
     //                             capitalizeEachWord(name), // Menampilkan name sebagai title
-    //                             style: AppTextStyles.bodyStyle.copyWith(fontWeight: FontWeight.bold),
+    //                             style: AppTextStyles.bodyBlack.copyWith(fontWeight: FontWeight.bold),
     //                           ),
     //                         ),
     //                         // Membuat SingleChildScrollView untuk menggulir horizontal
     //                         SingleChildScrollView(
     //                           scrollDirection: Axis.horizontal,
     //                           child: Row(
-    //                             children: galleries.map((galleryModel) {
+    //                             children: galleries.map((newGalleryModel) {
     //                               return Padding(
     //                                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
     //                                 child: SizedBox(
@@ -283,15 +303,15 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //                                           borderRadius: BorderRadius.vertical(
     //                                             top: Radius.circular(5),
     //                                           ),
-    //                                           child: galleryModel.imageUrl.startsWith('/')
+    //                                           child: newGalleryModel.imageUrl.startsWith('/')
     //                                               ? Image.file(
-    //                                                   File(galleryModel.imageUrl),
+    //                                                   File(newGalleryModel.imageUrl),
     //                                                   fit: BoxFit.cover,
     //                                                   height: 150,
     //                                                   width: double.infinity,
     //                                                 )
     //                                               : Image.network(
-    //                                                   galleryModel.imageUrl,
+    //                                                   newGalleryModel.imageUrl,
     //                                                   fit: BoxFit.cover,
     //                                                   height: 150,
     //                                                   width: double.infinity,
@@ -300,8 +320,8 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //                                         SizedBox(height: 4),
     //                                         Center(
     //                                           child: Text(
-    //                                             capitalizeEachWord(galleryModel.name),
-    //                                             style: AppTextStyles.mediumStyle.copyWith(fontWeight: FontWeight.bold),
+    //                                             capitalizeEachWord(newGalleryModel.name),
+    //                                             style: AppTextStyles.mediumBlack.copyWith(fontWeight: FontWeight.bold),
     //                                           ),
     //                                         ),
     //                                         // Menambahkan Row untuk posisi tombol Detail dan tombol Aksi
@@ -317,21 +337,21 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //                                                   builder: (BuildContext context) {
     //                                                     return AlertDialog(
     //                                                       backgroundColor: AppColors.backgroundColor,
-    //                                                       title: Text(capitalizeEachWord(galleryModel.name)),
+    //                                                       title: Text(capitalizeEachWord(newGalleryModel.name)),
     //                                                       content: Column(
     //                                                         crossAxisAlignment: CrossAxisAlignment.start,
     //                                                         mainAxisSize: MainAxisSize.min,
     //                                                         children: [
     //                                                           // Menampilkan imageUrl sebagai teks
-    //                                                           Text('Image URL: ${galleryModel.imageUrl}'),
+    //                                                           Text('Image URL: ${newGalleryModel.imageUrl}'),
     //                                                           SizedBox(height: 8),
-    //                                                           Text('Category: ${galleryModel.category}'),
-    //                                                           Text('Subcategory: ${galleryModel.subcategory}'),
-    //                                                           Text('Uploaded At: ${galleryModel.createdAt.toDate()}'),
+    //                                                           Text('Category: ${newGalleryModel.category}'),
+    //                                                           Text('Subcategory: ${newGalleryModel.subcategory}'),
+    //                                                           Text('Uploaded At: ${newGalleryModel.createdAt.toDate()}'),
     //                                                         ],
     //                                                       ),
     //                                                       actions: [
-    //                                                         SmallButton(
+    //                                                         MediumButton(
     //                                                           label: 'Close',
     //                                                           onPressed: () {
     //                                                             // Menutup dialog
@@ -356,10 +376,10 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //                                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
     //                                               child: Row(
     //                                                 children: [
-    //                                                   EditButton(data: galleryModel, page: 'gallery'),
+    //                                                   EditButton(data: newGalleryModel, page: 'gallery'),
     //                                                   SizedBox(width: 8),
     //                                                   DeleteButton(
-    //                                                     itemId: galleryModel.galleryId,
+    //                                                     itemId: newGalleryModel.galleryId,
     //                                                     itemType: 'gallery',
     //                                                     controller: _galleryController,
     //                                                   ),
@@ -389,5 +409,4 @@ class GalleryManagementScreenContent extends StatelessWidget {
     //     ),
     //   ],
     // );
-  }
-}
+

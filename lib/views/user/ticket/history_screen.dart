@@ -9,12 +9,14 @@ import 'package:guideme/core/services/firebase_auth_service.dart';
 import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/core/utils/text_utils.dart';
 import 'package:guideme/models/history_model.dart';
+import 'package:guideme/views/user/ticket/detail_history_screen.dart';
+import 'package:guideme/widgets/custom_appbar.dart';
 // import 'package:guideme/views/auth/login_screen.dart';
 import 'package:guideme/widgets/custom_button.dart';
+import 'package:guideme/widgets/custom_card.dart';
 import 'package:guideme/widgets/custom_divider.dart';
 import 'package:guideme/widgets/custom_navbar.dart';
 import 'package:guideme/widgets/custom_search.dart';
-import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:guideme/widgets/custom_title.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -27,11 +29,11 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  String page = 'history';
+  String page = 'newHistoryModel';
 
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  // final UserController _userController = UserController();
-  final FirebaseAuthService _authService = FirebaseAuthService();
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController searchController = TextEditingController();
+  final FirebaseAuthService _auth = FirebaseAuthService();
 
   late String formattedPurchaseDate;
 
@@ -42,18 +44,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _checkLoginStatus();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.initialize(); // Pastikan initialize dipanggil untuk memastikan data pengguna dimuat
   }
 
   // Memeriksa status login dan memperbarui state
   Future<void> _checkLoginStatus() async {
-    bool loggedIn = await _authService.isLoggedIn();
+    bool loggedIn = await _auth.isLoggedIn();
     setState(() {
       _isLoggedIn = loggedIn;
     });
   }
 
   // Fungsi untuk menangani perubahan pencarian
-  void _onSearchChanged(String query) {
+  void search(String query) {
     setState(() {
       _searchQuery = query.toLowerCase();
     });
@@ -62,52 +66,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
-      appBar: BurgerAppBar(
-        scaffoldKey: _scaffoldKey,
-        actions: _isLoggedIn
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  tooltip: 'Logout',
-                  onPressed: () {
-                    // Panggil handleLogout dari auth_utils.dart
-                    handleLogout(context);
-                  },
-                ),
-              ]
-            : [],
+      key: scaffoldKey,
+      appBar: BackSearchAppBar(
+        scaffoldKey: scaffoldKey,
+        searchController: searchController,
+        onSearch: search,
       ),
-      drawer: CustomSidebar(
-        isLoggedIn: _isLoggedIn,
-        onLogout: () {
-          // Panggil handleLogout juga di sini
-          handleLogout(context);
-        },
+      body: SingleChildScrollView(
+        child: Container(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 4,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TitlePage(title: "History", subtitle: "View Your Purchasing History"),
+              ),
+              SizedBox(
+                height: 16,
+              ),
+              HistoryScreenContent(
+                searchQuery: _searchQuery,
+              ),
+            ],
+          ),
+        ),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 4,
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TitlePage(title: "History", subtitle: "View Your Purchasing History"),
-          ),
-          SizedBox(
-            height: 16,
-          ),
-          SearchWidget(onSearchChanged: _onSearchChanged),
-          SizedBox(
-            height: 16,
-          ),
-          HistoryScreenContent(
-            searchQuery: _searchQuery,
-          ),
-        ],
-      ),
-      bottomNavigationBar: UserBottomNavBar(selectedIndex: 4),   
+      bottomNavigationBar: UserBottomNavBar(selectedIndex: 4),
     );
   }
 }
@@ -137,8 +124,6 @@ class HistoryScreenContent extends StatelessWidget {
               .snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          print(authProvider.uid);
-          print('user :${userUid}');
           return Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
@@ -151,38 +136,45 @@ class HistoryScreenContent extends StatelessWidget {
 
         // Pastikan data tidak null
         var docs = snapshot.data!.docs;
-        return Expanded(
-          child: ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[index];
-              Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-              try {
-                HistoryModel history = HistoryModel.fromMap(data, doc.id);
+        return ListView.builder(
+          shrinkWrap: true, // Pastikan ListView hanya mengambil ruang yang diperlukan
+          physics: NeverScrollableScrollPhysics(), // Mencegah scrolling ganda
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            var doc = snapshot.data!.docs[index];
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            try {
+              HistoryModel newHistoryModel = HistoryModel.fromMap(data, doc.id);
 
-                final DateTime purchaseDate = history.purchaseAt.toDate();
+              final DateTime purchaseDate = newHistoryModel.purchaseAt.toDate();
 
-                var formattedPurchaseDate = formatDate(purchaseDate);
+              var formattedPurchaseDate = formatDate(purchaseDate);
 
-                String formattedOpeningDate = '';
-                // String formattedTime = '';
-                if (history.openingDate != '') {
-                  DateTime openingDate = history.openingDate.toDate();
+              String formattedOpeningDate = '';
+              // String formattedTime = '';
+              if (newHistoryModel.openingDate != '') {
+                DateTime openingDate = newHistoryModel.openingDate.toDate();
 
-                  // Memformat tanggal
-                  formattedOpeningDate = DateFormat('dd MMM yyyy').format(openingDate); // Contoh: 11 Jun 2024
-                }
+                // Memformat tanggal
+                formattedOpeningDate = DateFormat('dd MMM yyyy').format(openingDate); // Contoh: 11 Jun 2024
+              }
 
-                return Container(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Card(
-                      elevation: 5,
-                      color: AppColors.backgroundColor, // Background untuk card
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
-                      ),
+              return Container(
+                width: double.infinity,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailHistoryScreen(
+                            data: newHistoryModel,
+                          ),
+                        ),
+                      );
+                    },
+                    child: MainCard(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                         child: Column(
@@ -235,7 +227,7 @@ class HistoryScreenContent extends StatelessWidget {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(5.0),
                                       child: Image.network(
-                                        history.imageUrl, // URL gambar
+                                        newHistoryModel.imageUrl, // URL gambar
                                         width: 60, // Lebar mengikuti lebar layar
                                         height: 60, // Tinggi gambar
                                         fit: BoxFit.cover, // Menyesuaikan gambar agar sesuai kotak
@@ -249,7 +241,7 @@ class HistoryScreenContent extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        capitalizeEachWord(history.ticketName),
+                                        capitalizeEachWord(newHistoryModel.ticketName),
                                         style: AppTextStyles.bodyBold,
                                         maxLines: 2, // Membatasi hanya dua baris
                                         overflow: TextOverflow.ellipsis, // Menambahkan ellipsis jika teks terlalu panjang
@@ -279,7 +271,7 @@ class HistoryScreenContent extends StatelessWidget {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "${history.quantity}",
+                                            "${newHistoryModel.quantity}",
                                             style: AppTextStyles.tinyStyle,
                                           ),
                                           SizedBox(width: 2),
@@ -315,7 +307,7 @@ class HistoryScreenContent extends StatelessWidget {
                                     Row(
                                       children: [
                                         Text(
-                                          "${formatRupiahDouble(history.totalPrice)}",
+                                          "${formatRupiahDouble(newHistoryModel.totalPrice)}",
                                           style: AppTextStyles.mediumBold,
                                         ),
                                       ],
@@ -329,7 +321,7 @@ class HistoryScreenContent extends StatelessWidget {
                                         // Navigator.push(
                                         //   context,
                                         //   MaterialPageRoute(
-                                        //     builder: (context) => PaymentScreen(data: history),
+                                        //     builder: (context) => PaymentScreen(data: newHistoryModel),
                                         //     // builder: (context) => DetailScreen(data: collectionName, id: doc.id),
                                         //   ),
                                         // );
@@ -345,12 +337,12 @@ class HistoryScreenContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                );
-              } catch (e) {
-                return Center(child: Text('Error parsing history data: $e'));
-              }
-            },
-          ),
+                ),
+              );
+            } catch (e) {
+              return Center(child: Text('Error parsing newHistoryModel data: $e'));
+            }
+          },
         );
       },
     );

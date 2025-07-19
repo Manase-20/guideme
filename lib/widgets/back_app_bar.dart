@@ -16,7 +16,7 @@ class cBackAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: IconButton(
           icon: Icon(
             AppIcons.back,
-            color: AppColors.secondaryTextColor, // Warna ikon back
+            color: AppColors.secondaryprimaryColor, // Warna ikon back
           ),
           onPressed: () {
             Navigator.of(context).pop(); // Fungsi untuk kembali ke halaman sebelumnya
@@ -41,7 +41,7 @@ class cBackAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Text(
               'Back', // Judul tetap
               style: TextStyle(
-                color: AppColors.secondaryTextColor, // Warna teks back
+                color: AppColors.secondaryprimaryColor, // Warna teks back
                 fontFamily: 'Inter', // Menggunakan font Inter
                 fontWeight: FontWeight.w600, // Menggunakan SemiBold
               ),

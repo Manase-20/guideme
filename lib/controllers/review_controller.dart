@@ -8,5 +8,11 @@ class ReviewController {
     await _firestore.collection('reviews').add(dataReview.toMap());
   }
 
-  // Future<void> updateEvent(ReviewModel event, String finalImageUrl) async {}
+  Future<void> updateReview(String reviewId, Map<String, dynamic> updatedData) async {
+    await _firestore.collection('reviews').doc(reviewId).update(updatedData);
+  }
+
+  Future<void> removeReview(String reviewId) async {
+    await _firestore.collection('reviews').doc(reviewId).delete();
+  }
 }

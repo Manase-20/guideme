@@ -1,38 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:guideme/core/constants/colors.dart';
+import 'package:guideme/core/constants/text_styles.dart';
+import 'package:guideme/main.dart';
 import 'package:guideme/models/category_model.dart';
-
-// class CategoryController {
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-//   // Mendapatkan semua kategori
-//   Stream<List<CategoryModel>> getCategories() {
-//     return _firestore.collection('categories').snapshots().map((snapshot) {
-//       return snapshot.docs.map((doc) {
-//         return CategoryModel.fromMap(doc.data(), doc.id);
-//       }).toList();
-//     });
-//   }
-
-//   // Menambahkan kategori baru
-//   Future<void> addCategory(String name) async {
-//     try {
-//       await _firestore.collection('categories').add({
-//         'name': name,
-//       });
-//     } catch (e) {
-//       throw Exception("Error adding category: $e");
-//     }
-//   }
-
-//   Future<void> deleteCategory(String categoryId) async {
-//     try {
-//       await _firestore.collection('categories').doc(categoryId).delete();
-//       print('Category deleted successfully');
-//     } catch (e) {
-//       print('Error deleting category: $e');
-//     }
-//   }
-// }
 
 class CategoryController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -63,8 +34,6 @@ class CategoryController {
     });
   }
 
-  
-
   // Menambahkan kategori baru
   Future<void> addCategory(String name, List<String> subcategories) async {
     try {
@@ -93,9 +62,19 @@ class CategoryController {
   }
 
   // Menghapus kategori
-  Future<void> deleteCategory(String categoryId) async {
+  Future<void> deleteCategory(BuildContext context, String categoryId) async {
     try {
       await _firestore.collection('categories').doc(categoryId).delete();
+      scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
+        content: Text(
+          "Category successfully deleted.",
+          style: AppTextStyles.mediumWhiteBold,
+        ),
+        backgroundColor: AppColors.redColor,
+        // behavior: SnackBarBehavior.floating,
+      ));
+
+      // DeleteSnackBar.show("Category successfully deleted.");
     } catch (e) {
       throw Exception("Error deleting category: $e");
     }
@@ -140,3 +119,45 @@ class CategoryController {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+// class CategoryController {
+//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+//   // Mendapatkan semua kategori
+//   Stream<List<CategoryModel>> getCategories() {
+//     return _firestore.collection('categories').snapshots().map((snapshot) {
+//       return snapshot.docs.map((doc) {
+//         return CategoryModel.fromMap(doc.data(), doc.id);
+//       }).toList();
+//     });
+//   }
+
+//   // Menambahkan kategori baru
+//   Future<void> addCategory(String name) async {
+//     try {
+//       await _firestore.collection('categories').add({
+//         'name': name,
+//       });
+//     } catch (e) {
+//       throw Exception("Error adding category: $e");
+//     }
+//   }
+
+//   Future<void> deleteCategory(String categoryId) async {
+//     try {
+//       await _firestore.collection('categories').doc(categoryId).delete();
+//       print('Category deleted successfully');
+//     } catch (e) {
+//       print('Error deleting category: $e');
+//     }
+//   }
+// }

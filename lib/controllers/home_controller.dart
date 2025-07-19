@@ -1,7 +1,6 @@
-import 'package:guideme/core/services/firebase_auth_service.dart';
+// import 'package:guideme/core/services/firebase_auth_service.dart';
 
-class HomeController {
-  final FirebaseAuthService _authService = FirebaseAuthService();
+// class HomeController {
+//   final FirebaseAuthService _auth = FirebaseAuthService();
 
- 
-}
+// }

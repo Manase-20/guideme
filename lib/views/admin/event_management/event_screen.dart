@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
-import 'dart:io'; // Menambahkan import untuk File
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guideme/controllers/event_controller.dart';
 import 'package:guideme/core/constants/constants.dart';
+import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/models/event_model.dart';
-import 'package:guideme/views/admin/event_management/create_event_screen.dart';
-import 'package:guideme/views/admin/event_management/modify_event_screen.dart';
-import 'package:guideme/widgets/custom_navbar.dart';
+import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:guideme/widgets/widgets.dart';
 import 'package:intl/intl.dart'; // Import DateFormat
 
-class EventScreen extends StatefulWidget {
-  const EventScreen({super.key});
+class EventManagementScreen extends StatefulWidget {
+  const EventManagementScreen({super.key});
 
   @override
   _EventScreenState createState() => _EventScreenState();
 }
 
-class _EventScreenState extends State<EventScreen> {
+class _EventScreenState extends State<EventManagementScreen> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   String page = 'event';
+
+  late ScrollController _scrollController;
+  double _paddingLeft = 12.0;
+  double _paddingRight = 0.0;
 
   @override
   void initState() {
@@ -26,15 +29,98 @@ class _EventScreenState extends State<EventScreen> {
 
     // Memulai pengecekan status event secara periodik
     EventController().scheduleEventStatusCheck();
+
+    _scrollController = ScrollController();
+    // Menambahkan listener untuk mendeteksi perubahan scroll
+    // _scrollController.addListener(() {
+    //   double currentScrollPosition = _scrollController.position.pixels;
+    //   double maxScrollExtent = _scrollController.position.maxScrollExtent;
+
+    //   // Jika scroll mencapai batas maksimum
+    //   if (currentScrollPosition >= maxScrollExtent) {
+    //     if (_paddingRight != 16.0) {
+    //       setState(() {
+    //         _paddingLeft = 0.0;
+    //         _paddingRight = 16.0; // Padding kanan saat scroll mencapai batas maksimum
+    //       });
+    //     }
+    //   }
+    //   // Jika scroll berada di awal
+    //   else if (currentScrollPosition <= 0) {
+    //     if (_paddingLeft != 16.0) {
+    //       setState(() {
+    //         _paddingLeft = 16.0; // Padding kiri saat scroll di awal
+    //         _paddingRight = 0.0; // Padding kanan saat scroll di awal
+    //       });
+    //     }
+    //   }
+    //   // Jika scroll berada di tengah konten
+    //   else {
+    //     if (_paddingLeft != 0.0 || _paddingRight != 0.0) {
+    //       setState(() {
+    //         _paddingLeft = 0.0; // Padding kiri menjadi 0
+    //         _paddingRight = 0.0; // Padding kanan menjadi 0
+    //       });
+    //     }
+    //   }
+    // });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Pastikan untuk membuang controller
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Event Management"),
+      key: scaffoldKey,
+      appBar: BurgerAppBar(scaffoldKey: scaffoldKey),
+      drawer: CustomAdminSidebar(
+        onLogout: () {
+          handleLogout(context);
+        },
       ),
-      body: EventScreenContent(),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          double currentScrollPosition = _scrollController.position.pixels;
+          double maxScrollExtent = _scrollController.position.maxScrollExtent;
+
+          // Jika scroll mencapai batas maksimum
+          if (scrollInfo.metrics.atEdge) {
+            if (scrollInfo.metrics.pixels == maxScrollExtent) {
+              if (_paddingRight != 16.0) {
+                setState(() {
+                  _paddingLeft = 0.0;
+                  _paddingRight = 16.0; // Padding kanan saat scroll mencapai batas maksimum
+                });
+              }
+            } else if (scrollInfo.metrics.pixels == 0) {
+              if (_paddingLeft != 16.0) {
+                setState(() {
+                  _paddingLeft = 16.0; // Padding kiri saat scroll di awal
+                  _paddingRight = 0.0; // Padding kanan saat scroll di awal
+                });
+              }
+            }
+          } else {
+            // Jika scroll berada di tengah konten
+            if (_paddingLeft != 0.0 || _paddingRight != 0.0) {
+              setState(() {
+                _paddingLeft = 0.0; // Padding kiri menjadi 0
+                _paddingRight = 0.0; // Padding kanan menjadi 0
+              });
+            }
+          }
+          return true; // Mengindikasikan bahwa notifikasi telah ditangani
+        },
+        child: EventScreenContent(
+          scrollController: _scrollController,
+          paddingLeft: _paddingLeft,
+          paddingRight: _paddingRight,
+        ),
+      ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80.0),
         child: AddButton(page),
@@ -47,11 +133,22 @@ class _EventScreenState extends State<EventScreen> {
 
 class EventScreenContent extends StatelessWidget {
   final EventController _eventController = EventController();
+  final ScrollController scrollController;
+  final double paddingLeft;
+  final double paddingRight;
+
+  EventScreenContent({
+    Key? key,
+    required this.scrollController,
+    required this.paddingLeft,
+    required this.paddingRight,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Row(
@@ -67,33 +164,27 @@ class EventScreenContent extends StatelessWidget {
                 return Center(child: CircularProgressIndicator());
               }
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Card(
-                  color: AppColors.backgroundColor,
-                  elevation: 4.0, // Menambahkan shadow pada card
-                  shape: RoundedRectangleBorder(),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                controller: scrollController,
+                // physics: AlwaysScrollableScrollPhysics(),
+                child: AnimatedPadding(
+                  padding: EdgeInsets.only(left: paddingLeft, right: paddingRight),
+                  duration: Duration(milliseconds: 200), // Durasi animasi
+                  child: Card(
+                    color: AppColors.backgroundColor,
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(),
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(AppColors.accentColor), // Warna latar belakang header
-                      headingTextStyle: AppTextStyles.mediumStyle.copyWith(
+                      headingTextStyle: AppTextStyles.mediumBlack.copyWith(
                         color: Colors.white, // Warna teks header
                         fontWeight: FontWeight.bold, // Menebalkan teks header
                       ),
                       columns: [
                         DataColumn(label: Text('Event Name')),
                         DataColumn(label: Text('Location')),
-                        DataColumn(label: Text('Category')),
-                        DataColumn(label: Text('Image URL')),
-                        DataColumn(label: Text('Price')),
-                        DataColumn(label: Text('Rating')),
-                        DataColumn(label: Text('Organizer')),
-                        DataColumn(label: Text('Description')),
-                        DataColumn(label: Text('Latitude')),
-                        DataColumn(label: Text('Longitude')),
-                        DataColumn(label: Text('Opening Time')),
-                        DataColumn(label: Text('Closing Time')),
+                        DataColumn(label: Text('Subategory')),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: snapshot.data!.docs.map((doc) {
@@ -108,16 +199,7 @@ class EventScreenContent extends StatelessWidget {
                           cells: [
                             DataCell(Text(eventModel.name)),
                             DataCell(Text(eventModel.location)),
-                            DataCell(Text(eventModel.category)),
-                            DataCell(Text(eventModel.imageUrl)),
-                            DataCell(Text('\$${eventModel.price}')),
-                            DataCell(Text('${eventModel.rating}')),
-                            DataCell(Text(eventModel.organizer)),
-                            DataCell(Text(eventModel.description)),
-                            DataCell(Text('${eventModel.latitude}')),
-                            DataCell(Text('${eventModel.longitude}')),
-                            DataCell(Text(openingTimeFormatted)),
-                            DataCell(Text(closingTimeFormatted)),
+                            DataCell(Text(eventModel.subcategory)),
                             DataCell(
                               Row(
                                 children: [
@@ -128,6 +210,7 @@ class EventScreenContent extends StatelessWidget {
                                   SizedBox(width: 8.0),
                                   DeleteButton(
                                     itemId: eventModel.eventId,
+                                    itemName: eventModel.name,
                                     itemType: 'event',
                                     controller: _eventController,
                                   ),
@@ -149,9 +232,6 @@ class EventScreenContent extends StatelessWidget {
     );
   }
 }
-
-
-
 
 // class EventScreenContent extends StatelessWidget {
 //   final EventController _eventController = EventController();

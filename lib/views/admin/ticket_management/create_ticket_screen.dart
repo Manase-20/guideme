@@ -5,6 +5,7 @@ import 'package:guideme/controllers/category_controller.dart';
 import 'package:guideme/controllers/ticket_controller.dart';
 import 'package:guideme/models/ticket_model.dart';
 import 'package:guideme/widgets/custom_form.dart';
+import 'package:guideme/widgets/custom_snackbar.dart';
 import 'package:guideme/widgets/widgets.dart';
 
 class CreateTicketManagementScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
   final _formKey = GlobalKey<FormState>();
 
   // Input field controllers
+  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _informationController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
@@ -32,6 +34,7 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
   String? selectedCategory;
   String? selectedSubcategory;
   String? selectedName;
+  String? selectedRecommendationId;
   String? selectedStatus;
   double? rating;
   // int? stock;
@@ -43,6 +46,7 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
   }
 
   Future<void> saveTicket() async {
+    FocusScope.of(context).unfocus();
     if (_formKey.currentState!.validate()) {
       // Validasi form
       if (selectedCategory != null && selectedName != null && selectedName != null) {
@@ -54,18 +58,23 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
           String mainImageUrl = ticketData['imageUrl'] ?? ''; // Gantilah default jika diperlukan
           String mainLocation = ticketData['location'] ?? ''; // Gantilah default jika diperlukan
           String mainOrganizer = ticketData['organizer'] ?? ''; // Gantilah default jika diperlukan
+          String mainDescription = ticketData['description'] ?? ''; // Gantilah default jika diperlukan
+          String mainInformation = ticketData['information'] ?? ''; // Gantilah default jika diperlukan
           // String mainStatus = ticketData['status'];
           Timestamp mainClosingTime = (ticketData['closingTime'] ?? Timestamp.now());
           Timestamp mainOpeningTime = (ticketData['openingTime'] ?? Timestamp.now());
 
-          TicketModel dataTicket = TicketModel(
+          TicketModel newTicketModel = TicketModel(
+            ticketId: '',
+            recommendationId: selectedRecommendationId ?? '',
             name: selectedName,
+            title: _titleController.text.isEmpty ? null : _titleController.text,
             location: mainLocation,
             organizer: mainOrganizer,
             category: selectedCategory!,
             subcategory: selectedSubcategory!,
-            description: _descriptionController.text,
-            information: _informationController.text,
+            description: _descriptionController.text.isNotEmpty ? _descriptionController.text : mainDescription,
+            information: _informationController.text.isNotEmpty ? _informationController.text : mainInformation,
             imageUrl: mainImageUrl,
             rating: mainRating,
             stock: int.tryParse(_stockController.text) ?? 100,
@@ -78,7 +87,7 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
           );
           try {
             // Memanggil fungsi addTicket untuk menyimpan event dan galeri ke Firestore
-            await _ticketController.addTicket(dataTicket);
+            await _ticketController.addTicket(newTicketModel);
 
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Ticket created successfully'),
@@ -91,14 +100,17 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
           }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Please complete all fields'),
-        ));
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        //   content: Text('Please complete all fields'),
+        // ));
+        DangerSnackBar.show(context, 'Please complete all fields');
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Please complete all fields correctly'),
-      ));
+      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      //   content: Text('Please complete all fields correctly'),
+      // ));
+      // DangerFloatingSnackBar.show(context: context, message: 'Please complete all fields correctly');
+      DangerSnackBar.show(context, 'Please complete all fields correctly');
     }
   }
 
@@ -124,7 +136,7 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                     if (!snapshot.hasData) {
                       return CircularProgressIndicator();
                     }
-                    return CustomDropdown(
+                    return TextDropdown(
                       label: 'Category',
                       items: snapshot.data ?? [],
                       onChanged: (value) {
@@ -152,13 +164,13 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                       : Stream.value([]), // Jika kategori tidak dipilih, berikan stream kosong
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return CustomDropdown(
+                      return TextDropdown(
                         label: 'Subcategory',
                         items: [],
                         enabled: false, // Disable jika kategori belum dipilih
                       );
                     }
-                    return CustomDropdown(
+                    return TextDropdown(
                       label: 'Subcategory',
                       items: snapshot.data ?? [],
                       enabled: selectedCategory != null, // Enable hanya jika kategori dipilih
@@ -179,22 +191,57 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                 ),
                 SizedBox(height: 16),
 
+                // StreamBuilder<List<String>>(
+                //   stream: selectedSubcategory != null ? _ticketController.getTicketNames(selectedCategory!, selectedSubcategory!) : Stream.value([]),
+                //   builder: (context, snapshot) {
+                //     if (!snapshot.hasData) {
+                //       return TextDropdown(
+                //         label: 'Subcategory',
+                //         items: snapshot.data ?? [],
+                //         enabled: false,
+                //       );
+                //     }
+                //     return TextDropdown(
+                //       label: 'Name',
+                //       items: snapshot.data ?? [],
+                //       onChanged: (value) {
+                //         setState(() {
+                //           selectedName = value; // Simpan nama yang dipilih
+                //         });
+                //       },
+                //       validator: (value) {
+                //         if (value == null || value.isEmpty) {
+                //           return 'Please select a name';
+                //         }
+                //         return null;
+                //       },
+                //     );
+                //   },
+                // ),
+
                 // Dropdown untuk memilih name
-                StreamBuilder<List<String>>(
+                StreamBuilder<List<Map<String, String>>>(
                   stream: selectedSubcategory != null ? _ticketController.getTicketNames(selectedCategory!, selectedSubcategory!) : Stream.value([]),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return CustomDropdown(
-                        label: 'Subcategory',
-                        items: snapshot.data ?? [],
+                      return TextDropdown(
+                        label: 'Name',
+                        items: [],
                         enabled: false,
                       );
                     }
-                    return CustomDropdown(
+
+                    // Ambil daftar tiket
+                    List<Map<String, String>> tickets = snapshot.data!;
+
+                    return TextDropdown(
                       label: 'Name',
-                      items: snapshot.data ?? [],
+                      items: tickets.map((ticket) => ticket['name']!).toList(), // Ambil nama dari tiket
                       onChanged: (value) {
+                        // Temukan ticket berdasarkan nama yang dipilih
+                        final selectedTicket = tickets.firstWhere((ticket) => ticket['name'] == value);
                         setState(() {
+                          selectedRecommendationId = selectedTicket['recommendationId']; // Simpan recommendationId
                           selectedName = value; // Simpan nama yang dipilih
                         });
                       },
@@ -210,29 +257,40 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                 SizedBox(height: 16),
 
                 // deskripsi Ticket
-                CustomTextField(
+                TextForm(
+                  controller: _titleController,
+                  label: 'Ticket Title',
+                  hintText: 'Enter ticket title here..',
+                  // validator: (value) => value == null || value.isEmpty ? 'Title is required' : null,
+                  useDefaultValidator: false,
+                ),
+                SizedBox(height: 16),
+
+                // deskripsi Ticket
+                TextArea(
                   controller: _descriptionController,
                   label: 'Ticket Description',
-                  hint: 'Enter ticket description here...',
-                  validator: (value) => value == null || value.isEmpty ? 'Description is required' : null,
+                  hintText: 'You have already entered a description.',
+                  useDefaultValidator: false,
                 ),
                 SizedBox(height: 16),
 
                 // informasi Ticket
-                CustomTextField(
+                TextArea(
                   controller: _informationController,
                   label: 'Ticket Information',
-                  hint: 'Enter ticket information here...',
-                  validator: (value) => value == null || value.isEmpty ? 'Information is required' : null,
+                  hintText: 'You have already entered a information.',
+                  useDefaultValidator: false,
                 ),
                 SizedBox(height: 16),
 
                 // price Ticket
-                CustomTextField(
+                TextForm(
                   controller: _priceController,
                   label: 'Ticket Price',
-                  hint: "You've set a price before",
+                  hintText: "You've set a price before",
                   keyboardType: TextInputType.number, // Hanya angka yang dapat dimasukkan
+                  useDefaultValidator: false,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly, // Membatasi input hanya angka
                   ],
@@ -240,10 +298,10 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                 SizedBox(height: 16),
 
                 // price Ticket
-                CustomTextField(
+                TextForm(
                   controller: _stockController,
                   label: 'Ticket Stock',
-                  hint: "Enter ticket stock here",
+                  hintText: "Enter ticket stock here",
                   keyboardType: TextInputType.number, // Hanya angka yang dapat dimasukkan
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly, // Membatasi input hanya angka
@@ -251,9 +309,9 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                 ),
                 SizedBox(height: 16),
 
-                CustomDropdown(
+                TextDropdown(
                   label: 'Status',
-                  hint: "Select a ticket status [Default value is available]",
+                  hint: "Select a ticket status (Default value is available)",
                   items: ['available', 'unavalaible'],
                   onChanged: (value) {
                     setState(() {
@@ -264,95 +322,50 @@ class _CreateTicketManagementScreenState extends State<CreateTicketManagementScr
                 SizedBox(height: 16),
 
                 // Waktu Buka
-                ListTile(
-                  title: Text('Opening Time'),
-                  subtitle: Text(_openingTime != null ? _openingTime!.toDate().toString() : "You've set an opening time before"),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay(hour: 8, minute: 0),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          _openingTime = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Opening Date Time',
+                  subtitle: "You've set an opening date time before",
+                  selectedTime: _openingTime,
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      _openingTime = selectedTime;
+                    });
                   },
                 ),
                 SizedBox(height: 16),
 
                 // Waktu Tutup
-                ListTile(
-                  title: Text('Closing Time'),
-                  subtitle: Text(_closingTime != null ? _closingTime!.toDate().toString() : "You've set a closing time before"),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay(hour: 8, minute: 0),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          _closingTime = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Closing Date Time',
+                  subtitle: "You've set an opening date time before",
+                  selectedTime: _closingTime,
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      _closingTime = selectedTime;
+                    });
                   },
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 60),
 
                 // Tombol Simpan Ticket
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SmallButton(
-                    onPressed: saveTicket, // Memanggil fungsi saveTicket ketika tombol ditekan
-                    label: 'Save',
-                  ),
-                ),
-                SizedBox(height: 16),
+                // Align(
+                //   alignment: Alignment.bottomRight,
+                //   child: MediumButton(
+                //     onPressed: saveTicket, // Memanggil fungsi saveTicket ketika tombol ditekan
+                //     label: 'Save',
+                //   ),
+                // ),
+                // SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
+      floatingActionButton: MediumButton(
+        onPressed: saveTicket,
+        label: 'Save Ticket',
+      ),
+      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 0),
     );
   }
 }

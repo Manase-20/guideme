@@ -1,75 +1,99 @@
-// import 'package:midtrans_sdk/midtrans_sdk.dart';
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'package:flutter/material.dart';
-
-// class MidtransService {
-//   MidtransSDK? _midtrans;
-
-//   // Inisialisasi SDK Midtrans
-//   Future<void> initSDK(BuildContext context) async {
-//     _midtrans = await MidtransSDK.init(
-//       config: MidtransConfig(
-//         clientKey: dotenv.env['MIDTRANS_CLIENT_KEY'] ?? "", // Pastikan clientKey sudah ada di .env
-//         merchantBaseUrl: dotenv.env['MIDTRANS_MERCHANT_BASE_URL'] ?? "", // URL Merchant
-//         colorTheme: ColorTheme(
-//           colorPrimary: Theme.of(context).colorScheme.secondary,
-//           colorPrimaryDark: Theme.of(context).colorScheme.secondary,
-//           colorSecondary: Theme.of(context).colorScheme.secondary,
-//         ),
-//       ),
-//     );
-//     _midtrans?.setUIKitCustomSetting(
-//       skipCustomerDetailsPages: true,
-//     );
-//     _midtrans!.setTransactionFinishedCallback((result) {
-//       print(result.toJson()); // Callback setelah transaksi selesai
-//     });
-//   }
-
-//   // Fungsi untuk memulai pembayaran
-//   Future<void> startPayment(String token) async {
-//     await _midtrans?.startPaymentUiFlow(
-//       token: token,
-//     );
-//   }
-
-//   // Hapus callback transaksi selesai
-//   void dispose() {
-//     _midtrans?.removeTransactionFinishedCallback();
-//   }
-// }
-
+import 'package:midtrans_sdk/midtrans_sdk.dart';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MidtransService {
-  // URL server atau endpoint untuk mendapatkan token
-  final String apiUrl = 'http://192.168.1.5:3000/api/get-snap-token';
+  MidtransSDK? _midtrans;
 
-  // Fungsi untuk mengambil token dari backend
-  Future<void> getTokenFromBackend() async {
+  // Inisialisasi SDK Midtrans untuk development
+  Future<void> initSDK(BuildContext context) async {
+    _midtrans = await MidtransSDK.init(
+      config: MidtransConfig(
+        clientKey: "SB-Mid-client-61XuGAwQ8Bj8LzSS", // Development client key
+        merchantBaseUrl: "https://api.sandbox.midtrans.com", // Sandbox URL
+        colorTheme: ColorTheme(
+          colorPrimary: Theme.of(context).colorScheme.secondary,
+          colorPrimaryDark: Theme.of(context).colorScheme.secondary,
+          colorSecondary: Theme.of(context).colorScheme.secondary,
+        ),
+      ),
+    );
+    _midtrans?.setUIKitCustomSetting(
+      skipCustomerDetailsPages: true,
+    );
+    _midtrans!.setTransactionFinishedCallback((result) {
+      print(
+          "Transaction Result: ${result.toJson()}"); // Callback setelah transaksi selesai
+    });
+  }
+
+  // Fungsi untuk memulai pembayaran dengan token
+  Future<void> startPayment(String token) async {
+    await _midtrans?.startPaymentUiFlow(
+      token: token,
+    );
+  }
+
+  // Fungsi untuk mendapatkan payment link dari backend
+  Future<String> getPaymentLink({
+    required String orderId,
+    required int amount,
+    required String customerName,
+    required String customerEmail,
+  }) async {
     try {
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse('https://app.sandbox.midtrans.com/snap/v1/transactions'),
         headers: {
-          'Content-Type': 'application/json'
-        }, // Pastikan format header benar
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          // Server key sandbox user (Base64: SB-Mid-server-5LgQLUwANsOKdoCSfMAvBmGw:)
+          'Authorization':
+              'Basic U0ItTWlkLXNlcnZlci01TGdRTFV3QU5zT0tkb0NTZk1BdkJtR3c6',
+        },
         body: jsonEncode({
-          'orderId': 'order123',
-          'amount': 100000,
+          'transaction_details': {'order_id': orderId, 'gross_amount': amount},
+          'customer_details': {
+            'first_name': customerName,
+            'email': customerEmail,
+          },
+          'item_details': [
+            {
+              'id': 'item1',
+              'price': amount,
+              'quantity': 1,
+              'name': 'GuideMe Service'
+            }
+          ]
         }),
       );
 
-      if (response.statusCode == 200) {
-        String token = json.decode(response.body)['snapToken'];
-        print("Token: $token"); // Debug token yang diterima
+      print("Server response: " + response.body);
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+
+        // Snap API memberikan redirect_url
+        if (data['redirect_url'] != null) {
+          return data['redirect_url'];
+        }
+
+        // Fallback: buat URL manual
+        final token = data['token'];
+        return 'https://app.sandbox.midtrans.com/snap/v2/vtweb/$token';
       } else {
-        print("Server response: ${response.body}"); // Debug respons server
-        throw Exception("Failed to get token");
+        print("Server response: " + response.body);
+        throw Exception("Failed to get payment link: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      print("Error getting payment link: $e");
       throw e;
     }
+  }
+
+  // Hapus callback transaksi selesai
+  void dispose() {
+    _midtrans?.removeTransactionFinishedCallback();
   }
 }

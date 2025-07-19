@@ -165,11 +165,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:guideme/controllers/category_controller.dart';
 import 'package:guideme/controllers/gallery_controller.dart';
+import 'package:guideme/controllers/ticket_controller.dart';
 import 'package:guideme/models/gallery_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guideme/widgets/custom_appbar.dart';
 import 'package:guideme/widgets/custom_form.dart';
 import 'package:guideme/widgets/custom_button.dart';
+import 'package:guideme/widgets/custom_navbar.dart';
+import 'package:guideme/widgets/custom_snackbar.dart';
 import 'package:guideme/widgets/custom_title.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -184,13 +187,15 @@ class CreateGalleryManagementScreen extends StatefulWidget {
 class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementScreen> {
   final GalleryController _galleryController = GalleryController();
   final CategoryController _categoryController = CategoryController();
-  // final TextEditingController _nameController = TextEditingController();
+  // final TicketController _ticketController = TicketController();
+
   final TextEditingController _descriptionController = TextEditingController();
 
   String _imageUrl = ''; // Menyimpan URL gambar yang sudah diunggah
   String? selectedCategory;
   String? selectedName;
   String? selectedSubcategory;
+  String? selectedRecommendationId;
 
   File? _imageFile;
 
@@ -256,26 +261,27 @@ class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementS
 
   // Fungsi untuk menyimpan galeri ke Firestore
   Future<void> _saveGallery() async {
-    if (selectedCategory == null || selectedSubcategory == null || selectedName == null || _descriptionController.text.isEmpty || _imageUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Please fill all fields and upload an image.'),
-      ));
-      return;
+    FocusScope.of(context).unfocus(); // Tutup keyboard
+    if (selectedCategory == null || selectedSubcategory == null || selectedName == null || _imageUrl.isEmpty) {
+      DangerSnackBar.show(context, 'Please fill all fields and upload an image.');
     }
 
-    GalleryModel dataGallery = GalleryModel(
+    GalleryModel newGalleryModel = GalleryModel(
       galleryId: '',
+      recommendationId: selectedRecommendationId!,
       name: selectedName!,
       category: selectedCategory!,
       subcategory: selectedSubcategory!,
-      description: _descriptionController.text,
+      description: _descriptionController.text.isNotEmpty ? _descriptionController.text : '',
       imageUrl: _imageUrl,
       createdAt: Timestamp.now(),
     );
 
-    await _galleryController.addGallery(dataGallery);
-
-    Navigator.pop(context);
+    await _galleryController.addGallery(newGalleryModel);
+    SuccessSnackBar.show(context, 'Gallery created successfully', duration: Duration(seconds: 1));
+    Future.delayed(Duration(seconds: 2), () {
+      Navigator.pop(context);
+    });
   }
 
   @override
@@ -289,6 +295,7 @@ class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementS
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CustomFormTitle(firstText: 'Create Gallery', secondText: 'Design your data exactly how you want it.'),
+
               // Dropdown untuk memilih kategori
               StreamBuilder<List<String>>(
                 stream: _categoryController.getCategories(),
@@ -296,7 +303,7 @@ class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementS
                   if (!snapshot.hasData) {
                     return CircularProgressIndicator();
                   }
-                  return CustomDropdown(
+                  return TextDropdown(
                     label: 'Category',
                     items: snapshot.data ?? [],
                     onChanged: (value) {
@@ -306,58 +313,157 @@ class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementS
                         selectedName = null; // Reset name
                       });
                     },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a category';
+                      }
+                      return null;
+                    },
                   );
                 },
               ),
               SizedBox(height: 16),
 
               // Dropdown untuk memilih subkategori
-              if (selectedCategory != null)
-                StreamBuilder<List<String>>(
-                  stream: _categoryController.getSubcategories(selectedCategory!),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return CircularProgressIndicator();
-                    }
-                    return CustomDropdown(
+              StreamBuilder<List<String>>(
+                stream: selectedCategory != null
+                    ? _categoryController.getSubcategories(selectedCategory!) // Ambil subkategori hanya jika kategori dipilih
+                    : Stream.value([]), // Jika kategori tidak dipilih, berikan stream kosong
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return TextDropdown(
                       label: 'Subcategory',
-                      items: snapshot.data ?? [],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedSubcategory = value;
-                          selectedName = null;
-                        });
-                      },
+                      items: [],
+                      enabled: false, // Disable jika kategori belum dipilih
                     );
-                  },
-                ),
-              SizedBox(height: selectedCategory != null ? 16 : 0),
+                  }
+                  return TextDropdown(
+                    label: 'Subcategory',
+                    items: snapshot.data ?? [],
+                    enabled: selectedCategory != null, // Enable hanya jika kategori dipilih
+                    onChanged: (value) {
+                      setState(() {
+                        selectedSubcategory = value;
+                        selectedName = null; // Reset name ketika subkategori berubah
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a subcategory';
+                      }
+                      return null;
+                    },
+                  );
+                },
+              ),
+              SizedBox(height: 16),
 
-              // Dropdown untuk memuat dokumen berdasarkan kategori
-              if (selectedCategory != null)
-                StreamBuilder<List<String>>(
-                  stream: _galleryController.getNamesByCategory(selectedCategory!),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return CircularProgressIndicator();
-                    }
-                    return CustomDropdown(
+              // Dropdown untuk memilih name
+              StreamBuilder<List<Map<String, String>>>(
+                stream: selectedSubcategory != null ? _galleryController.getGalleryNames(selectedCategory!, selectedSubcategory!) : Stream.value([]),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return TextDropdown(
                       label: 'Name',
-                      items: snapshot.data ?? [],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedName = value; // Simpan nama yang dipilih
-                        });
-                      },
+                      items: [],
+                      enabled: false,
                     );
-                  },
-                ),
-              SizedBox(height: selectedCategory != null ? 16 : 0),
+                  }
 
-              CustomTextField(
+                  // Ambil daftar tiket
+                  List<Map<String, String>> tickets = snapshot.data!;
+
+                  return TextDropdown(
+                    label: 'Name',
+                    items: tickets.map((ticket) => ticket['name']!).toList(), // Ambil nama dari tiket
+                    onChanged: (value) {
+                      // Temukan ticket berdasarkan nama yang dipilih
+                      final selectedTicket = tickets.firstWhere((ticket) => ticket['name'] == value);
+                      setState(() {
+                        selectedRecommendationId = selectedTicket['recommendationId']; // Simpan recommendationId
+                        selectedName = value; // Simpan nama yang dipilih
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a name';
+                      }
+                      return null;
+                    },
+                  );
+                },
+              ),
+              SizedBox(height: 16),
+
+              // // Dropdown untuk memilih kategori
+              // StreamBuilder<List<String>>(
+              //   stream: _categoryController.getCategories(),
+              //   builder: (context, snapshot) {
+              //     if (!snapshot.hasData) {
+              //       return CircularProgressIndicator();
+              //     }
+              //     return CustomDropdown(
+              //       label: 'Category',
+              //       items: snapshot.data ?? [],
+              //       onChanged: (value) {
+              //         setState(() {
+              //           selectedCategory = value; // Simpan kategori yang dipilih
+              //           selectedSubcategory = null; // Reset subkategori
+              //           selectedName = null; // Reset name
+              //         });
+              //       },
+              //     );
+              //   },
+              // ),
+              // SizedBox(height: 16),
+
+              // // Dropdown untuk memilih subkategori
+              // if (selectedCategory != null)
+              //   StreamBuilder<List<String>>(
+              //     stream: _categoryController.getSubcategories(selectedCategory!),
+              //     builder: (context, snapshot) {
+              //       if (!snapshot.hasData) {
+              //         return CircularProgressIndicator();
+              //       }
+              //       return CustomDropdown(
+              //         label: 'Subcategory',
+              //         items: snapshot.data ?? [],
+              //         onChanged: (value) {
+              //           setState(() {
+              //             selectedSubcategory = value;
+              //             selectedName = null;
+              //           });
+              //         },
+              //       );
+              //     },
+              //   ),
+              // SizedBox(height: selectedCategory != null ? 16 : 0),
+
+              // // Dropdown untuk memuat dokumen berdasarkan kategori
+              // if (selectedCategory != null)
+              //   StreamBuilder<List<String>>(
+              //     stream: _galleryController.getNamesByCategory(selectedCategory!),
+              //     builder: (context, snapshot) {
+              //       if (!snapshot.hasData) {
+              //         return CircularProgressIndicator();
+              //       }
+              //       return CustomDropdown(
+              //         label: 'Name',
+              //         items: snapshot.data ?? [],
+              //         onChanged: (value) {
+              //           setState(() {
+              //             selectedName = value; // Simpan nama yang dipilih
+              //           });
+              //         },
+              //       );
+              //     },
+              //   ),
+              // SizedBox(height: selectedCategory != null ? 16 : 0),
+
+              TextArea(
                 controller: _descriptionController,
                 label: 'Description',
-                hint: 'Enter gallery description here...',
+                hintText: 'Enter gallery description here..',
               ),
               SizedBox(height: 16),
 
@@ -366,18 +472,23 @@ class _CreateGalleryManagementScreenState extends State<CreateGalleryManagementS
                 imageFile: _imageFile, // Menampilkan preview gambar
                 onPressed: _pickImage, // Pilih gambar
               ),
-
-              Align(
-                alignment: Alignment.bottomRight, // Memposisikan ke kanan bawah
-                child: SmallButton(
-                  onPressed: uploadImage, // Fungsi untuk mengunggah gambar
-                  label: 'Upload',
-                ),
-              ),
+             SizedBox(height: 60),
+              // Align(
+              //   alignment: Alignment.bottomRight, // Memposisikan ke kanan bawah
+              //   child: MediumButton(
+              //     onPressed: uploadImage, // Fungsi untuk mengunggah gambar
+              //     label: 'Upload',
+              //   ),
+              // ),
             ],
           ),
         ),
       ),
+      floatingActionButton: MediumButton(
+        onPressed: uploadImage,
+        label: 'Save Gallery',
+      ),
+      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 4),
     );
   }
 }

@@ -6,14 +6,14 @@
 // import 'package:guideme/widgets/admin_bottom_navbar.dart';
 // import 'package:guideme/widgets/widgets.dart';
 
-// class CategoryScreen extends StatefulWidget {
-//   const CategoryScreen({super.key});
+// class CategoryManagementScreen extends StatefulWidget {
+//   const CategoryManagementScreen({super.key});
 
 //   @override
 //   _CategoryScreenState createState() => _CategoryScreenState();
 // }
 
-// class _CategoryScreenState extends State<CategoryScreen> {
+// class _CategoryScreenState extends State<CategoryManagementScreen> {
 //   final CategoryController _categoryController = CategoryController();
 
 //   @override
@@ -34,7 +34,7 @@
 //   }
 // }
 
-// // Widget terpisah untuk konten CategoryScreen
+// // Widget terpisah untuk konten CategoryManagementScreen
 // class CategoryScreenContent extends StatelessWidget {
 //   final CategoryController _categoryController = CategoryController();
 
@@ -128,31 +128,37 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guideme/controllers/category_controller.dart';
 import 'package:guideme/core/constants/constants.dart';
+import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/models/category_model.dart';
+import 'package:guideme/widgets/custom_sidebar.dart';
 // import 'package:guideme/views/admin/category_management/create_category_screen.dart';
 // import 'package:guideme/widgets/custom_navbar.dart';
 import 'package:guideme/widgets/widgets.dart';
 
-class CategoryScreen extends StatefulWidget {
-  const CategoryScreen({super.key});
+class CategoryManagementScreen extends StatefulWidget {
+  const CategoryManagementScreen({super.key});
 
   @override
   _CategoryScreenState createState() => _CategoryScreenState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen> {
-  // final CategoryController _categoryController = CategoryController();
+class _CategoryScreenState extends State<CategoryManagementScreen> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   String page = 'category';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Category Management"),
+      key: scaffoldKey,
+      appBar: BurgerAppBar(scaffoldKey: scaffoldKey),
+      drawer: CustomAdminSidebar(
+        onLogout: () {
+          handleLogout(context);
+        },
       ),
       body: CategoryScreenContent(),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0),
+        padding: const EdgeInsets.only(bottom: 140.0),
         child: AddButton(page),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endDocked, // Posisi di kanan bawah
@@ -161,7 +167,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 }
 
-// Widget terpisah untuk konten CategoryScreen
+// Widget terpisah untuk konten CategoryManagementScreen
 class CategoryScreenContent extends StatelessWidget {
   final CategoryController _categoryController = CategoryController();
 
@@ -229,7 +235,10 @@ class CategoryScreenContent extends StatelessWidget {
                             itemBuilder: (context, subIndex) {
                               return Row(
                                 children: [
-                                  Icon(AppIcons.list2),
+                                  Icon(
+                                    AppIcons.subcategory,
+                                    size: 12,
+                                  ),
                                   Expanded(
                                     child: ListTile(
                                       title: Text(category.subcategories[subIndex]),

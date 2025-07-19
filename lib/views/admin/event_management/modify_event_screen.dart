@@ -217,10 +217,11 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                CustomFormTitle(firstText: 'Modify Event', secondText: 'Update your event details.'),
                 ValueListenableBuilder<String>(
                   valueListenable: nameNotifier,
                   builder: (context, name, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _nameController,
                       label: 'Event Name',
                       // onChanged: (value) => nameNotifier.value = value,
@@ -240,7 +241,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: locationNotifier,
                   builder: (context, location, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _locationController,
                       label: 'Event Location',
                       // onChanged: (value) => locationNotifier.value = value,
@@ -325,7 +326,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: organizerNotifier,
                   builder: (context, organizer, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _organizerController,
                       label: 'Event Organizer',
                       // onChanged: (value) => organizerNotifier.value = value,
@@ -349,7 +350,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                     if (!snapshot.hasData) {
                       return CircularProgressIndicator();
                     }
-                    return CustomDropdown(
+                    return TextDropdown(
                       label: 'Category',
                       items: ['event'], // Hanya memiliki satu item tetap
                       value: selectedCategory, // Menampilkan nilai selectedCategory
@@ -377,7 +378,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                       if (!snapshot.hasData) {
                         return CircularProgressIndicator();
                       }
-                      return CustomDropdown(
+                      return TextDropdown(
                         label: 'Subcategory',
                         items: snapshot.data!,
                         value: selectedSubcategory,
@@ -400,7 +401,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: descriptionNotifier,
                   builder: (context, description, _) {
-                    return CustomTextField(
+                    return TextArea(
                       controller: _descriptionController,
                       label: 'Event Description',
                       onChanged: (value) => descriptionNotifier.value = value,
@@ -413,7 +414,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: informationNotifier,
                   builder: (context, information, _) {
-                    return CustomTextField(
+                    return TextArea(
                       controller: _informationController,
                       label: 'Event Information',
                       onChanged: (value) => informationNotifier.value = value,
@@ -426,7 +427,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: priceNotifier,
                   builder: (context, price, _) {
-                    return CustomTextField(
+                    return TextForm(
                       controller: _priceController,
                       label: 'Event Price',
                       onChanged: (value) => priceNotifier.value = value,
@@ -436,7 +437,7 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ),
                 SizedBox(height: 16),
 
-                CustomDropdown(
+                TextDropdown(
                   label: 'Status',
                   items: ['open', 'close'],
                   value: selectedStatus,
@@ -461,173 +462,51 @@ class _ModifyEventScreenState extends State<ModifyEventScreen> {
                 ),
 
                 // Waktu Buka
-                ListTile(
-                  title: Text('Opening Time'),
-                  subtitle: Text(
-                    openingTimeNotifier != null ? (openingTimeNotifier.value).toDate().toString() : 'Select opening time',
-                  ),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          openingTimeNotifier.value = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Opening Date Time',
+                  subtitle: openingTimeNotifier.value != null ? (openingTimeNotifier.value).toDate().toString() : 'Select closing date time',
+                  selectedTime: openingTimeNotifier.value, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      openingTimeNotifier.value = selectedTime; // Mengupdate openingTimeNotifier
+                    });
                   },
                 ),
                 SizedBox(height: 16),
 
                 // Waktu Tutup
-                ListTile(
-                  title: Text('Closing Time'),
-                  subtitle: Text(
-                    closingTimeNotifier != null ? (closingTimeNotifier!.value as Timestamp).toDate().toString() : 'Select closing time',
-                  ),
-                  trailing: Icon(Icons.access_time),
-                  onTap: () async {
-                    // Menampilkan DatePicker untuk memilih tanggal
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    // Jika tanggal dipilih, lanjutkan memilih waktu
-                    if (selectedDate != null) {
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      // Jika waktu dipilih, gabungkan dengan tanggal dan simpan
-                      if (time != null) {
-                        setState(() {
-                          closingTimeNotifier.value = Timestamp.fromDate(DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            time.hour,
-                            time.minute,
-                          ));
-                        });
-                      }
-                    }
+                DateTimePicker(
+                  title: 'Closing Date Time',
+                  subtitle: closingTimeNotifier.value != null ? (closingTimeNotifier.value).toDate().toString() : 'Select closing date time',
+                  selectedTime: closingTimeNotifier.value, // Menggunakan Timestamp sebagai default
+                  onDateTimeSelected: (selectedTime) {
+                    setState(() {
+                      closingTimeNotifier.value = selectedTime; // Mengupdate closingTimeNotifier
+                    });
                   },
                 ),
-                SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SmallButton(
-                    onPressed: _saveChanges,
-                    label: 'Save',
-                  ),
-                ),
+                SizedBox(height: 60),
+
+                // Align(
+                //   alignment: Alignment.bottomRight,
+                //   child: MediumButton(
+                //     onPressed: _saveChanges,
+                //     label: 'Save',
+                //   ),
+                // ),
               ],
             ),
           ),
         ),
       ),
+      floatingActionButton: MediumButton(
+        onPressed: _saveChanges,
+        label: 'Save Changes',
+      ),
+      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 2),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import 'package:flutter/material.dart';
 // import 'package:guideme/controllers/event_controller.dart';

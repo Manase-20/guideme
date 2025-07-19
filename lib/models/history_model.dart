@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HistoryModel {
+  String ticketId;
   String uid;
   String customerName;
   String customerEmail;
@@ -22,6 +23,7 @@ class HistoryModel {
   Timestamp? updatedAt;
 
   HistoryModel({
+    required this.ticketId,
     required this.uid,
     required this.customerName,
     required this.customerEmail,
@@ -46,6 +48,7 @@ class HistoryModel {
   // Membuat instance Event dari Map (data Firestore)
   factory HistoryModel.fromMap(Map<String, dynamic> map, String eventId) {
     return HistoryModel(
+      ticketId: map['ticketId'],
       uid: map['uid'],
       customerName: map['customerName'],
       customerEmail: map['customerEmail'],
@@ -71,6 +74,7 @@ class HistoryModel {
   // Mengonversi instance Event ke Map untuk disimpan di Firestore
   Map<String, dynamic> toMap() {
     return {
+      'ticketId': ticketId,
       'uid': uid,
       'customerName': customerName,
       'customerEmail': customerEmail,
@@ -94,6 +98,7 @@ class HistoryModel {
   } // Menambahkan copyWith method
 
   HistoryModel copyWith({
+    String? ticketId,
     String? uid,
     String? customerName,
     String? customerEmail,
@@ -116,6 +121,7 @@ class HistoryModel {
     Timestamp? updatedAt,
   }) {
     return HistoryModel(
+      ticketId: ticketId ?? this.ticketId,
       uid: uid ?? this.uid,
       customerName: customerName ?? this.customerName,
       customerEmail: customerEmail ?? this.customerEmail,

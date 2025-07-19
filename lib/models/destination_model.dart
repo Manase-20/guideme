@@ -64,7 +64,10 @@ class DestinationModel {
       updatedAt: map['updatedAt'],
     );
   }
-
+  // Fungsi tambahan untuk mengambil DestinationModel dari DocumentSnapshot
+  static DestinationModel fromFirestore(DocumentSnapshot snapshot) {
+    return DestinationModel.fromMap(snapshot.data() as Map<String, dynamic>, snapshot.id);
+  }
   // Mengonversi instance Event ke Map untuk disimpan di Firestore
   Map<String, dynamic> toMap() {
     return {
@@ -130,4 +133,5 @@ class DestinationModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
 }

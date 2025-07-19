@@ -86,7 +86,6 @@ class EventController {
       }
 
       try {
-        
         // Update event di Firestore
         await _firestore.collection('events').doc(event.eventId).update({
           ...event.toMap(),
@@ -95,10 +94,7 @@ class EventController {
 
         // Jika rating diperbarui, perbarui juga koleksi tickets yang memiliki name yang sama
         if (newRating != null) {
-          var ticketDocs = await _firestore
-              .collection('tickets')
-              .where('name', isEqualTo: event.name)
-              .get();
+          var ticketDocs = await _firestore.collection('tickets').where('name', isEqualTo: event.name).get();
 
           for (var doc in ticketDocs.docs) {
             await _firestore.collection('tickets').doc(doc.id).update({
@@ -107,7 +103,7 @@ class EventController {
             });
           }
         }
-          //  await _firestore.collection('events').doc(event.eventId).update(event.toMap());
+        //  await _firestore.collection('events').doc(event.eventId).update(event.toMap());
 
         // Query semua galeri terkait event
         var galleryDocs = await _firestore
@@ -187,9 +183,46 @@ class EventController {
   // }
 
   // Menghapus event berdasarkan eventId
-  Future<void> deleteEvent(String eventId) async {
+  Future<void> deleteEvent(String eventId, String name) async {
+    // Menghapus event berdasarkan eventId
     await _firestore.collection('events').doc(eventId).delete();
+
+    // Menghapus dokumen pada koleksi tickets dengan recommendationId = eventId
+    QuerySnapshot ticketsSnapshot = await _firestore.collection('tickets').where('recommendationId', isEqualTo: eventId).get();
+
+    // Menghapus semua tiket yang memiliki recommendationId yang sama
+    for (var ticket in ticketsSnapshot.docs) {
+      await ticket.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi tickets dengan name = name
+    QuerySnapshot nameSnapshot = await _firestore.collection('tickets').where('name', isEqualTo: name).get();
+
+    // Menghapus semua tiket yang memiliki name yang sama
+    for (var ticket in nameSnapshot.docs) {
+      await ticket.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi galleries dengan recommendationId = eventId
+    QuerySnapshot gallerySnapshot = await _firestore.collection('galleries').where('recommendationId', isEqualTo: eventId).get();
+
+    // Menghapus semua gallery yang memiliki recommendationId yang sama
+    for (var gallery in gallerySnapshot.docs) {
+      await gallery.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi galleries dengan name = name
+    QuerySnapshot galleryNameSnapshot = await _firestore.collection('galleries').where('name', isEqualTo: name).get();
+
+    // Menghapus semua gallery yang memiliki name yang sama
+    for (var gallery in galleryNameSnapshot.docs) {
+      await gallery.reference.delete();
+    }
   }
+
+  // Future<void> deleteEvent(String eventId) async {
+  //   await _firestore.collection('events').doc(eventId).delete();
+  // }
 
   // Fungsi untuk memeriksa apakah event sudah melewati closingTime dan mengubah statusnya
   Future<void> checkAndCloseExpiredEvents() async {

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
 import 'package:guideme/controllers/gallery_controller.dart';
 import 'package:guideme/models/destination_model.dart';
 import 'package:guideme/models/gallery_model.dart';
@@ -100,10 +99,7 @@ class DestinationController {
 
         // Jika rating baru tidak null, perbarui juga koleksi tickets
         if (newRating != null) {
-          var ticketDocs = await _firestore
-              .collection('tickets')
-              .where('name', isEqualTo: destination.name)
-              .get();
+          var ticketDocs = await _firestore.collection('tickets').where('name', isEqualTo: destination.name).get();
 
           for (var doc in ticketDocs.docs) {
             await _firestore.collection('tickets').doc(doc.id).update({
@@ -197,9 +193,45 @@ class DestinationController {
   // }
 
   // Menghapus destination berdasarkan destinationId
-  Future<void> deleteDestination(String destinationId) async {
+  Future<void> deleteDestination(String destinationId, String name) async {
     await _firestore.collection('destinations').doc(destinationId).delete();
+
+    // Menghapus dokumen pada koleksi tickets dengan recommendationId = destinationId
+    QuerySnapshot ticketsSnapshot = await _firestore.collection('tickets').where('recommendationId', isEqualTo: destinationId).get();
+
+    // Menghapus semua tiket yang memiliki recommendationId yang sama
+    for (var ticket in ticketsSnapshot.docs) {
+      await ticket.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi tickets dengan name = name
+    QuerySnapshot nameSnapshot = await _firestore.collection('tickets').where('name', isEqualTo: name).get();
+
+    // Menghapus semua tiket yang memiliki name yang sama
+    for (var ticket in nameSnapshot.docs) {
+      await ticket.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi galleries dengan recommendationId = destinationId
+    QuerySnapshot gallerySnapshot = await _firestore.collection('galleries').where('recommendationId', isEqualTo: destinationId).get();
+
+    // Menghapus semua gallery yang memiliki recommendationId yang sama
+    for (var gallery in gallerySnapshot.docs) {
+      await gallery.reference.delete();
+    }
+
+    // Menghapus dokumen pada koleksi galleries dengan name = name
+    QuerySnapshot galleryNameSnapshot = await _firestore.collection('galleries').where('name', isEqualTo: name).get();
+
+    // Menghapus semua gallery yang memiliki name yang sama
+    for (var gallery in galleryNameSnapshot.docs) {
+      await gallery.reference.delete();
+    }
   }
+
+  // Future<void> deleteDestination(String destinationId) async {
+  //   await _firestore.collection('destinations').doc(destinationId).delete();
+  // }
 
   // Fungsi untuk memeriksa apakah destination sudah melewati closingTime dan mengubah statusnya
   Future<void> checkAndCloseExpireddestinations() async {

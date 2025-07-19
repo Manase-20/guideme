@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
-import 'dart:io'; // Menambahkan import untuk File
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guideme/controllers/destination_controller.dart';
-import 'package:guideme/controllers/destination_controller.dart';
 import 'package:guideme/core/constants/constants.dart';
+import 'package:guideme/core/utils/auth_utils.dart';
 import 'package:guideme/models/destination_model.dart';
-import 'package:guideme/models/destination_model.dart';
-import 'package:guideme/views/admin/destination_management/create_destination_screen.dart';
-import 'package:guideme/views/admin/destination_management/modify_destination_screen.dart';
-import 'package:guideme/widgets/custom_navbar.dart';
+import 'package:guideme/widgets/custom_sidebar.dart';
 import 'package:guideme/widgets/widgets.dart';
 import 'package:intl/intl.dart'; // Import DateFormat
 
-class DestinationScreen extends StatefulWidget {
-  const DestinationScreen({super.key});
+class DestinationManagementScreen extends StatefulWidget {
+  const DestinationManagementScreen({super.key});
 
   @override
   _DestinationScreenState createState() => _DestinationScreenState();
 }
 
-class _DestinationScreenState extends State<DestinationScreen> {
+class _DestinationScreenState extends State<DestinationManagementScreen> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   String page = 'destination';
 
   @override
@@ -33,8 +30,12 @@ class _DestinationScreenState extends State<DestinationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Destination Management"),
+      key: scaffoldKey,
+      appBar: BurgerAppBar(scaffoldKey: scaffoldKey),
+      drawer: CustomAdminSidebar(
+        onLogout: () {
+          handleLogout(context);
+        },
       ),
       body: DestinationScreenContent(),
       floatingActionButton: Padding(
@@ -79,23 +80,14 @@ class DestinationScreenContent extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(AppColors.accentColor), // Warna latar belakang header
-                      headingTextStyle: AppTextStyles.mediumStyle.copyWith(
+                      headingTextStyle: AppTextStyles.mediumBlack.copyWith(
                         color: Colors.white, // Warna teks header
                         fontWeight: FontWeight.bold, // Menebalkan teks header
                       ),
                       columns: [
                         DataColumn(label: Text('Destination Name')),
                         DataColumn(label: Text('Location')),
-                        DataColumn(label: Text('Category')),
-                        DataColumn(label: Text('Image URL')),
-                        DataColumn(label: Text('Price')),
-                        DataColumn(label: Text('Rating')),
-                        DataColumn(label: Text('Organizer')),
-                        DataColumn(label: Text('Description')),
-                        DataColumn(label: Text('Latitude')),
-                        DataColumn(label: Text('Longitude')),
-                        DataColumn(label: Text('Opening Time')),
-                        DataColumn(label: Text('Closing Time')),
+                        DataColumn(label: Text('Subcategory')),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: snapshot.data!.docs.map((doc) {
@@ -103,23 +95,14 @@ class DestinationScreenContent extends StatelessWidget {
                         DestinationModel destinationModel = DestinationModel.fromMap(data, doc.id);
 
                         // Format openingTime dan closingTime
-                        String openingTimeFormatted = DateFormat('yyyy-MM-dd HH:mm').format(destinationModel.openingTime.toDate());
-                        String closingTimeFormatted = DateFormat('yyyy-MM-dd HH:mm').format(destinationModel.closingTime.toDate());
+                        // String openingTimeFormatted = DateFormat('yyyy-MM-dd HH:mm').format(destinationModel.openingTime.toDate());
+                        // String closingTimeFormatted = DateFormat('yyyy-MM-dd HH:mm').format(destinationModel.closingTime.toDate());
 
                         return DataRow(
                           cells: [
                             DataCell(Text(destinationModel.name)),
                             DataCell(Text(destinationModel.location)),
-                            DataCell(Text(destinationModel.category)),
-                            DataCell(Text(destinationModel.imageUrl)),
-                            DataCell(Text('\$${destinationModel.price}')),
-                            DataCell(Text('${destinationModel.rating}')),
-                            DataCell(Text(destinationModel.organizer)),
-                            DataCell(Text(destinationModel.description)),
-                            DataCell(Text('${destinationModel.latitude}')),
-                            DataCell(Text('${destinationModel.longitude}')),
-                            DataCell(Text(openingTimeFormatted)),
-                            DataCell(Text(closingTimeFormatted)),
+                            DataCell(Text(destinationModel.subcategory)),
                             DataCell(
                               Row(
                                 children: [
@@ -127,6 +110,7 @@ class DestinationScreenContent extends StatelessWidget {
                                   SizedBox(width: 8.0),
                                   DeleteButton(
                                     itemId: destinationModel.destinationId,
+                                    itemName: destinationModel.name,
                                     itemType: 'destination',
                                     controller: _destinationController,
                                   ),

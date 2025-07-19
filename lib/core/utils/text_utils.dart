@@ -8,10 +8,15 @@ String capitalizeEachWord(String text) {
       .join(' '); // Gabungkan kembali kata-kata
 }
 
+String truncateText(String text, int maxLength) {
+  return text.length > maxLength ? '${text.substring(0, maxLength)}..' : text;
+}
+
 String formatRupiah(int amount) {
   final numberFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   return numberFormat.format(amount);
 }
+
 String formatRupiahDouble(double amount) {
   final numberFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   return numberFormat.format(amount);

@@ -72,11 +72,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:guideme/controllers/category_controller.dart';
+import 'package:guideme/core/constants/constants.dart';
 import 'package:guideme/models/category_model.dart';
 import 'package:guideme/widgets/custom_appbar.dart';
 import 'package:guideme/widgets/custom_button.dart';
 import 'package:guideme/widgets/custom_form.dart';
 import 'package:guideme/widgets/custom_navbar.dart';
+import 'package:guideme/widgets/custom_snackbar.dart';
 import 'package:guideme/widgets/custom_title.dart';
 
 class CreateCategoryScreen extends StatefulWidget {
@@ -87,69 +89,70 @@ class CreateCategoryScreen extends StatefulWidget {
 }
 
 class _CreateCategoryScreenState extends State<CreateCategoryScreen> with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>(); // Kunci untuk Form
   final CategoryController _categoryController = CategoryController();
   final TextEditingController _categoryNameController = TextEditingController();
   final TextEditingController _subCategoryNameController = TextEditingController();
+
   List<String> _subcategories = [];
-  late TabController _tabController;
   String? _selectedCategory;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // Mengatur 2 tab
+    _tabController = TabController(length: 2, vsync: this);
+
+    // Tambahkan listener untuk mendeteksi perubahan tab
+    _tabController.addListener(() {
+      setState(() {}); // Memanggil setState untuk memperbarui tampilan
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _submitCategory() async {
     String name = _categoryNameController.text.trim().toLowerCase();
-
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Category name cannot be empty")),
-      );
-      return;
+    // Memeriksa apakah form valid
+    if (_formKey.currentState!.validate()) {
+      try {
+        // Tambahkan kategori baru dengan subkategori kosong
+        await _categoryController.addCategory(name, _subcategories);
+        SuccessSnackBar.show(context, 'Category added successfully');
+        _categoryNameController.clear();
+        setState(() {
+          _subcategories.clear(); // Reset subcategories after adding category
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error adding category: $e")),
+        );
+      }
+      Navigator.pop(context);
+      return; // Hentikan eksekusi jika ada kesalahan
     }
-
-    try {
-      // Tambahkan kategori baru dengan subkategori kosong
-      await _categoryController.addCategory(name, _subcategories);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Category added successfully")),
-      );
-      _categoryNameController.clear();
-      setState(() {
-        _subcategories.clear(); // Reset subcategories after adding category
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error adding category: $e")),
-      );
-    }
-    Navigator.pop(context);
   }
 
-  void _addSubcategory() async {
+  void _submitSubcategory() async {
     String subcategoryName = _subCategoryNameController.text.trim().toLowerCase();
-    if (_selectedCategory == null || subcategoryName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please select a category and provide a subcategory name")),
-      );
-      return;
-    }
 
-    try {
-      // Memanggil addSubcategory dengan ID kategori yang dipilih
-      await _categoryController.addSubcategory(_selectedCategory!, subcategoryName);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Subcategory added successfully")),
-      );
-      _subCategoryNameController.clear();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error adding subcategory: $e")),
-      );
+    if (_formKey.currentState!.validate()) {
+      try {
+        // Memanggil addSubcategory dengan ID kategori yang dipilih
+        await _categoryController.addSubcategory(_selectedCategory!, subcategoryName);
+        SuccessSnackBar.show(context, 'Subcategory added successfully');
+        _subCategoryNameController.clear();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error adding subcategory: $e")),
+        );
+      }
+      Navigator.pop(context);
     }
-    Navigator.pop(context);
   }
 
   @override
@@ -158,119 +161,123 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> with Single
       appBar: BackAppBar(
         title: 'Back',
         bottom: TabBar(
+          dividerColor: Colors.transparent,
           controller: _tabController,
           tabs: [
-            Tab(text: 'Add Category'),
-            Tab(text: 'Add Subcategory'),
+            Tab(
+              child: Row(
+                children: [
+                  Icon(AppIcons.category),
+                  SizedBox(width: 8),
+                  Text('Category'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                children: [
+                  Icon(AppIcons.subcategory),
+                  SizedBox(width: 8),
+                  Text('Subcategory'),
+                ],
+              ),
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab pertama: Menambahkan kategori
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomFormTitle(firstText: 'Create Category', secondText: 'Design your data exactly how you want it.'),
-                // SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Category Name',
-                  controller: _categoryNameController,
-                  hint: 'Enter category name here',
-                  onChanged: (value) {
-                    _categoryNameController.value = TextEditingValue(
-                      text: value.toLowerCase(),
-                      selection: _categoryNameController.selection,
-                    );
-                  },
-                ),
-
-                SizedBox(height: 16),
-                // ElevatedButton(
-                //   onPressed: _submitCategory,
-                //   child: Text('Add Category'),
-                // ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SmallButton(label: 'Add', onPressed: _submitCategory),
-                )
-              ],
+      body: Form(
+        key: _formKey,
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // Tab pertama: Menambahkan kategori
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomFormTitle(firstText: 'Create Category', secondText: 'Design your data exactly how you want it.'),
+                  // SizedBox(height: 16),
+                  TextForm(
+                    label: 'Category Name',
+                    controller: _categoryNameController,
+                    hintText: 'Enter category here..',
+                    validator: (value) => value == null || value.isEmpty ? 'Category is required' : null,
+                    onChanged: (value) {
+                      _categoryNameController.value = TextEditingValue(
+                        text: value.toLowerCase(),
+                        selection: _categoryNameController.selection,
+                      );
+                    },
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
             ),
-          ),
 
-          // Tab kedua: Menambahkan subkategori
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomFormTitle(firstText: 'Create Subcategory', secondText: 'Design your data exactly how you want it.'),
-                // Dropdown untuk memilih kategori
-                StreamBuilder<List<CategoryModel>>(
-                  stream: _categoryController.getCategoriesList(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
-                    }
+            // Tab kedua: Menambahkan subkategori
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomFormTitle(firstText: 'Create Subcategory', secondText: 'Design your data exactly how you want it.'),
+                  // Dropdown untuk memilih kategori
+                  StreamBuilder<List<CategoryModel>>(
+                    stream: _categoryController.getCategoriesList(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator();
+                      }
 
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
+                      if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Text('No categories available');
-                    }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Text('No categories available');
+                      }
 
-                    // Mendapatkan daftar kategori dengan id
-                    List<CategoryModel> categories = snapshot.data!;
+                      // Mendapatkan daftar kategori dengan id
+                      List<CategoryModel> categories = snapshot.data!;
 
-                    return DropdownCategory(
-                      selectedCategory: _selectedCategory,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          // Menyimpan ID kategori yang dipilih
-                          _selectedCategory = newValue;
-                        });
-                      },
-                      categories: categories,
-                      label: 'Category', // Label untuk dropdown
-                    );
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Form input untuk nama subkategori
-                // TextField(
-                //   controller: _subCategoryNameController,
-                //   decoration: InputDecoration(
-                //     label: 'Subcategory Name',
-                //     border: OutlineInputBorder(),
-                //   ),
-                // ),
-                CustomTextField(
-                  label: 'Subcategory Name',
-                  controller: _subCategoryNameController,
-                  hint: 'Enter subcategory name here',
-                ),
-                SizedBox(height: 16),
-
-                // Tombol untuk menambahkan subkategori
-                // ElevatedButton(
-                //   onPressed: _addSubcategory,
-                //   child: Text('Add Subcategory'),
-                // ),
-
-                Align(
-                    alignment: Alignment.bottomRight, // Memposisikan ke kanan bawah
-                    child: SmallButton(label: 'Add', onPressed: _addSubcategory)),
-              ],
+                      return DropdownCategory(
+                        selectedCategory: _selectedCategory,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            // Menyimpan ID kategori yang dipilih
+                            _selectedCategory = newValue;
+                          });
+                        },
+                        validator: (value) => value == null || value.isEmpty ? 'Category is required' : null,
+                        categories: categories,
+                        label: 'Category', // Label untuk dropdown
+                      );
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  TextForm(
+                    label: 'Subcategory',
+                    controller: _subCategoryNameController,
+                    hintText: 'Enter subcategory here..',
+                    validator: (value) => value == null || value.isEmpty ? 'Subcategory is required' : null,
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+      floatingActionButton: _tabController.index == 0
+          ? MediumButton(
+              label: 'Add Category',
+              onPressed: _submitCategory,
+            )
+          : MediumButton(
+              label: 'Add Subcategory',
+              onPressed: _submitSubcategory,
+            ),
       bottomNavigationBar: AdminBottomNavBar(selectedIndex: 3),
     );
   }

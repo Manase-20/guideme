@@ -1,33 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:guideme/core/services/auth_provider.dart';
-import 'package:guideme/core/services/firebase_auth_service.dart';
 import 'package:guideme/core/services/firebase_options.dart'; // File auto-generated oleh Firebase
 import 'package:guideme/views/admin/dashboard_screen.dart';
-// import 'firebase_options.dart'; // File auto-generated oleh Firebase
-
-// screen
-// import 'package:guideme/views/auth/login_screen.dart' as auth;
-// import 'package:guideme/views/auth/register_screen.dart' as auth;
 import 'package:guideme/views/user/home_screen.dart';
-// import 'package:guideme/views/admin/user_management/user_screen.dart' as admin;
-
-// konstanta
 import 'package:guideme/core/constants/constants.dart';
 import 'package:provider/provider.dart';
-// import 'package:guideme/views/user/home_screen.dart';
-
-// example
-// import 'package:firebase_functions/firebase_functions.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'package:guideme/views/user/profile/profile.dart';
-// import 'package:guideme/core/services/midtrans_service.dart';
-// import 'package:midtrans_flutter/midtrans_flutter.dart';
-
-//supabase
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
@@ -37,13 +18,18 @@ void main() async {
   );
   // supabase
   await Supabase.initialize(
-    url: 'https://errgdpvuqptgmkobutnt.supabase.co',
+    url: 'https://ovknhddyefflxxuiogcw.supabase.co',
+    // url: 'https://errgdpvuqptgmkobutnt.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycmdkcHZ1cXB0Z21rb2J1dG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTg2MTAsImV4cCI6MjA0ODk3NDYxMH0.bOPICi0eFnqBFiNyufFgrVtXvradIylCNMenDFE0XHk',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92a25oZGR5ZWZmbHh4dWlvZ2N3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzNjE1ODcsImV4cCI6MjA1MDkzNzU4N30.7Jjppf5wqYdrpnHYI_NYuWC6kqzF1Aktm8EUKg3zQrg',
+    // anonKey:
+    //     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycmdkcHZ1cXB0Z21rb2J1dG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTg2MTAsImV4cCI6MjA0ODk3NDYxMH0.bOPICi0eFnqBFiNyufFgrVtXvradIylCNMenDFE0XHk',
   );
-  // await dotenv.load();
-  // print("Dotenv loaded");
-  // runApp(MyApp());
+  // checkClosingTimes();
+
+  // Memuat data gambar (misalnya gambar dari Supabase Storage)
+  // await loadImagesFromSupabase();
+
   runApp(
     MultiProvider(
       providers: [
@@ -56,10 +42,121 @@ void main() async {
   );
 }
 
+// Future<void> checkClosingTimes() async {
+//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+//   // Cek koleksi 'destinations'
+//   QuerySnapshot destinationsSnapshot = await _firestore.collection('destinations').get();
+//   for (var doc in destinationsSnapshot.docs) {
+//     DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+//     // Jika closingTime sudah lewat
+//     if (closingTime.isBefore(DateTime.now())) {
+//       await _firestore.collection('destinations').doc(doc.id).update({
+//         'status': 'close', // Ubah status menjadi 'close'
+//       });
+//     }
+//   }
+
+//   // Cek koleksi 'events'
+//   QuerySnapshot eventsSnapshot = await _firestore.collection('events').get();
+//   for (var doc in eventsSnapshot.docs) {
+//     DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+//     // Jika closingTime sudah lewat
+//     if (closingTime.isBefore(DateTime.now())) {
+//       await _firestore.collection('events').doc(doc.id).update({
+//         'status': 'close', // Ubah status menjadi 'close'
+//       });
+//     }
+// }
+// }
+
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-class MyApp extends StatelessWidget {
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Mulai pengecekan berkala
+    _startPeriodicCheck();
+    // Mulai mendengarkan perubahan pada koleksi
+    _listenToChanges();
+  }
+
+  void _startPeriodicCheck() {
+    // Panggil checkClosingTimes setiap 5 menit
+    _timer = Timer.periodic(Duration(minutes: 5), (timer) {
+      checkClosingTimes();
+    });
+  }
+
+  void _listenToChanges() {
+    // Mendengarkan perubahan pada koleksi 'destinations'
+    _firestore.collection('destinations').snapshots().listen((snapshot) {
+      for (var doc in snapshot.docs) {
+        DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+        if (closingTime.isBefore(DateTime.now())) {
+          _firestore.collection('destinations').doc(doc.id).update({
+            'status': 'close',
+          });
+        }
+      }
+    });
+
+    // Mendengarkan perubahan pada koleksi 'events'
+    _firestore.collection('events').snapshots().listen((snapshot) {
+      for (var doc in snapshot.docs) {
+        DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+        if (closingTime.isBefore(DateTime.now())) {
+          _firestore.collection('events').doc(doc.id).update({
+            'status': 'close',
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> checkClosingTimes() async {
+    // Cek koleksi 'destinations'
+    QuerySnapshot destinationsSnapshot = await _firestore.collection('destinations').get();
+    for (var doc in destinationsSnapshot.docs) {
+      DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+      if (closingTime.isBefore(DateTime.now())) {
+        await _firestore.collection('destinations').doc(doc.id).update({
+          'status': 'close',
+        });
+      }
+    }
+
+    // Cek koleksi 'events'
+    QuerySnapshot eventsSnapshot = await _firestore.collection('events').get();
+    for (var doc in eventsSnapshot.docs) {
+      DateTime closingTime = (doc['closingTime'] as Timestamp).toDate();
+      if (closingTime.isBefore(DateTime.now())) {
+        await _firestore.collection('events').doc(doc.id).update({
+          'status': 'close',
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Hentikan timer saat widget dibuang
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,18 +168,73 @@ class MyApp extends StatelessWidget {
         // Tentukan warna utama dan latar belakang aplikasi
         primaryColor: Colors.white, // Menentukan warna utama aplikasi.
         scaffoldBackgroundColor: AppColors.backgroundColor, // Mengatur warna latar belakang aplikasi
+        useMaterial3: true, // Menggunakan Material Design 3
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primaryColor, // Warna utama
+          secondary: AppColors.secondaryColor, // Warna aksen
+        ),
 
         // Menentukan font utama untuk aplikasi
         fontFamily: 'Inter', // Menetapkan Inter sebagai font default
 
         // Tentukan tema teks untuk berbagai ukuran dan jenis teks
         textTheme: TextTheme(
-          bodyLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.normal),
-          bodyMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.normal),
-          titleLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
-          titleMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
-          headlineMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+          bodyLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.normal, fontSize: 12),
+          bodyMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.normal, fontSize: 10),
+          titleLarge: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 16),
+          titleMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 14),
+          headlineMedium: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18),
+
           // Anda dapat menyesuaikan lebih lanjut sesuai kebutuhan aplikasi
+        ),
+
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: AppColors.primaryColor, // Warna kursor global
+          selectionColor: AppColors.primaryColor.withOpacity(0.5), // Warna seleksi teks
+          selectionHandleColor: AppColors.primaryColor, // Warna pegangan seleksi
+        ),
+
+        inputDecorationTheme: InputDecorationTheme(
+          // Warna untuk label, hint, dan teks
+          labelStyle: TextStyle(color: AppColors.primaryColor),
+          hintStyle: TextStyle(color: AppColors.secondaryColor),
+          helperStyle: TextStyle(color: AppColors.primaryColor),
+          errorStyle: TextStyle(color: AppColors.redColor),
+
+          // Warna untuk border
+          // enabledBorder: OutlineInputBorder(
+          //   borderSide: BorderSide(color: AppColors.primaryColor),
+          //   borderRadius: BorderRadius.circular(8.0),
+          // ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.primaryColor, width: 2.0),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.redColor),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.redColor, width: 2.0),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+
+          // Warna latar belakang
+          filled: true,
+          fillColor: AppColors.backgroundColor,
+
+          // Ikon di dalam TextField
+          prefixIconColor: AppColors.primaryColor,
+          suffixIconColor: AppColors.primaryColor,
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primaryColor, // Warna teks default untuk TextButton
+            backgroundColor: AppColors.backgroundColor, // Warna latar belakang default untuk TextButton
+          ),
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: AppColors.secondaryColor, // Mengubah warna CircularProgressIndicator global
         ),
       ),
       home: const SplashScreen(),
@@ -98,19 +250,16 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // final FirebaseAuthService _auth = FirebaseAuthService(); // Service autentikasi dan Firestore
-  bool _showButton = false;
   bool _isLoading = true; // Untuk kontrol loading
 
   @override
   void initState() {
     super.initState();
     // Timer untuk menampilkan tombol setelah 3 detik
-    Future.delayed(Duration(seconds: 1), () {
+    Future.delayed(Duration(seconds: 3), () {
       setState(() {
-        // _checkLogin();
-        _showButton = true;
-        _isLoading = false; // Hentikan loading setelah 3 detik
+        _checkLogin(); // Panggil _checkLogin setelah loading selesai
+        // _isLoading = false; // Hentikan loading setelah 3 detik
       });
     });
   }
@@ -166,20 +315,14 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             SizedBox(height: 20),
             if (_isLoading) CircularProgressIndicator(color: Colors.white), // Menampilkan CircularProgressIndicator hanya saat loading
-            SizedBox(height: 40),
-            if (_showButton) // Menampilkan tombol setelah loading selesai
-              ElevatedButton(
-                onPressed: _checkLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
-                child: Text(
-                  'Get Started',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
+            // if (_isLoading) SizedBox(
+            //   width: 120,
+            //   child: LinearProgressIndicator(
+            //   color: Colors.white,
+            //   minHeight: 4.0,
+            //   backgroundColor: Colors.grey[300],
+            //   ),
+            // ), // Menampilkan LinearProgressIndicator hanya saat loading
           ],
         ),
       ),
@@ -229,3 +372,35 @@ class _SplashScreenState extends State<SplashScreen> {
 //       );
 //     }
 //   }
+
+
+// Future<void> loadImagesFromSupabase() async {
+//   final storage = Supabase.instance.client.storage.from('images');
+
+//   try {
+//     // Mendapatkan daftar file dalam folder 'uploads'
+//     final response = await storage.list(path: 'uploads');
+
+//     // Periksa apakah response berisi file atau error
+//     if (response is List<FileObject>) {
+//       // Menampilkan daftar file yang ditemukan
+//       for (var file in response) {
+//         print('File ditemukan: ${file.name}');
+
+//         // Mengunduh gambar dari setiap file
+//         final fileData = await storage.download('uploads/${file.name}');
+//         await processImage(fileData);
+//       }
+//     } else {
+//       // Jika response bukan List<FileObject>, periksa error-nya
+//       // print('Terjadi kesalahan: ${response.error?.message}');
+//     }
+//   } catch (e) {
+//     print('Terjadi kesalahan saat mengambil gambar: $e');
+//   }
+// }
+
+// Future<void> processImage(Uint8List imageBytes) async {
+//   // Proses gambar, misalnya disimpan dalam cache atau ditampilkan
+//   print('Memproses gambar..');
+// }
