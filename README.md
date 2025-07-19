@@ -5,7 +5,7 @@ Deskripsi Proyek
 Guide Me adalah aplikasi mobile berbasis Flutter yang dirancang untuk membantu wisatawan, khususnya di Kota Batam, dalam menavigasi dan mengeksplorasi tempat wisata. Aplikasi ini menyediakan fitur pencarian destinasi, navigasi dengan Google Maps, pembelian tiket wisata secara online, dan penyajian informasi wisata yang lengkap dan akurat. Dengan antarmuka ramah pengguna serta fitur offline, Guide Me memberikan pengalaman berwisata yang praktis, informatif, dan menyenangkan.
 
 
-✨ Fitur Utama
+Fitur Utama
 
 - Pencarian dan eksplorasi destinasi wisata
 - Integrasi Google Maps untuk navigasi
@@ -46,7 +46,7 @@ Instalasi & Setup
 
 1. Clone repository
    bash
-   git clone https://github.com/username/guide-me.git
+   git clone https://github.com/Manase-20/guideme.githttps://github.com/Manase-20/guideme.git
    cd guide-me
    
 2.Install dependencies
